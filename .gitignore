@@ -1,0 +1,44 @@
+# Secrets
+.env
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Reports (may contain sensitive scan data)
+reports/
+
+# Data
+data/nvd_feeds/
+data/cve_database.db
+
+# Logs (CAI session traces)
+logs/
+
+# Test data (may contain real IPs)
+testnmap.xml
+
+# Stray files
+1
+
+# Cache
+.pytest_cache/
+
+# Claude Code
+.claude/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/

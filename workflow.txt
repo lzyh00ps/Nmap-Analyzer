@@ -1,0 +1,26 @@
+1. Run Nmap Scan
+      ↓
+2. Parse Nmap XML results
+      ↓
+3. Identify services on each host
+      ↓
+4. Detect host role
+      (DC, Web, SQL, etc.)
+      ↓
+5. Group hosts by role
+      ↓
+6. Generate pentest checklist per role group
+      ↓
+7. Group identical services
+      ↓
+8. Lookup vulnerabilities in SQLite CVE database
+      ↓
+9. Generate enumeration commands
+      • Static playbook commands
+      • AI-generated commands
+      ↓
+10. Calculate risk score
+      ↓
+11. Display findings
+      ↓
+12. Generate interactive dashboard

