@@ -1,26 +1,221 @@
-1. Run Nmap Scan
+╔══════════════════════════════════════════════════════════════════════╗
+║                    NMAP ANALYZER — FULL WORKFLOW                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+PHASE 1 — SCAN INGESTION
+─────────────────────────
+1. Run Nmap Scan (external input)
+      nmap -sV -sC -T4 --open -oX scan.xml TARGET_RANGE
       ↓
-2. Parse Nmap XML results
+2. Parse Nmap XML
+      • Extracts: IP, hostname, port, protocol, service name, product, version
+      • Skips: closed ports, tcpwrapped pseudo-services
+      • Multi-file support: merge and deduplicate hosts across multiple XMLs
       ↓
-3. Identify services on each host
+3. Host Role Detection
+      • Classifies each host: Web Server, Domain Controller, File Server,
+        SQL Server, Mail Server, Network Device, Workstation, Unknown, etc.
+      • Uses weighted port/service pattern matching
       ↓
-4. Detect host role
-      (DC, Web, SQL, etc.)
+4. Group Hosts by Role
+      • Builds role → [IP list] map for report and checklist generation
+
+
+PHASE 2 — ANALYSIS
+────────────────────
+5. Service Inventory
+      • Groups identical services across all hosts
+      • Deduplicates so each unique service is analyzed once
       ↓
-5. Group hosts by role
+6. CVE Lookup  (local SQLite — NVD sourced)
+      • Matches service name + product + version against cve_database.db
+      • Enriched ranking:
+          CVSS score base
+          + CISA KEV bonus     (+5.0 if in Known Exploited Vulnerabilities catalog)
+          + Exploit type bonus (+2.0 for RCE / auth_bypass / privesc / sqli)
+          + Product match      (+3.0 if product name matches)
+      • Filters out DoS-only CVEs
       ↓
-6. Generate pentest checklist per role group
+7. Playbook Matching
+      • Selects enumeration commands from 120+ service playbooks
+      • Single web directory scanner: feroxbuster only
+        (ffuf / gobuster / dirsearch removed — no redundant duplicate runs)
+      • Nikto: runs with -nointeractive (output captured to stdout correctly)
+      • Nuclei: runs without -t template path (uses default templates, no permission errors)
+      • sslyze: runs without --regular (removed in v5.x, now default behavior)
       ↓
-7. Group identical services
+8. AI Command Generation  [optional — requires --ai]
+      • Per-service prompt sent to local Ollama (default: gemma4:26b)
+      • Generates additional enumeration commands not in playbooks
+      • Commands filtered by service category — no cross-category hallucinations
       ↓
-8. Lookup vulnerabilities in SQLite CVE database
+9. Risk Scoring
+      • Score = f(base CVSS, host role criticality, KEV status, host count)
+      • Findings sorted highest risk first
       ↓
-9. Generate enumeration commands
-      • Static playbook commands
-      • AI-generated commands
+10. AI Network Overview  [optional — requires --ai]
+      • 2-3 sentence plain-English scan summary injected into AI Report tab
+
+
+PHASE 3 — AI ATTACK PLAN  [optional — requires --ai]
+──────────────────────────────────────────────────────
+11. Profile Analysis or Chunked Analysis
+
+      --profile external:
+        Single prompt → initial access paths, WAF/CDN detection,
+        internet-facing attack surface, prioritized foothold routes
+
+      --profile internal:
+        Single prompt → lateral movement, AD attack chains,
+        Kerberoasting, NTLM relay, privilege escalation paths
+
+      No profile:
+        Chunked — per-service exploitability + cross-service correlation summary
+
+      Model: gemma4:26b
+      Streaming enabled — no generation timeout, model runs until done
+
+
+PHASE 4 — REPORTING  (no --execute)
+─────────────────────────────────────
+12. Text Report   →  reports/<project>_<timestamp>/findings.txt
+13. HTML Report   →  reports/<project>_<timestamp>/report.html
+
+      HTML Tabs:
+        Dashboard        — role charts, risk heatmap, host inventory, checklists
+        Suggested Action — per-service findings, playbook + AI commands, CVEs, risk scores
+        AI Report        — network overview + full attack plan  [requires --ai]
+        Live Findings    — execution results + Ollama synthesis  [requires --execute --ai]
+
+14. Debug Log     →  logs/run_<timestamp>.log  (full DEBUG, written every run)
+
+
+PHASE 5 — EXECUTION  [optional — requires --execute]
+──────────────────────────────────────────────────────
+15. Build Execution Plan
+      • Substitutes TARGET / TARGET-IP / TARGET-PORT placeholders
+      • Classifies each command:
+          execute  → safe enumeration only
+                     (nmap scripts, feroxbuster, nikto, nuclei, curl, whatweb,
+                      smbclient, smbmap, enum4linux, ldapsearch, snmpwalk,
+                      ssh-audit, openssl, dig, smtp-user-enum, showmount, etc.)
+          manual   → brute force / exploitation — shown as suggestions only
+                     (hydra, sqlmap, metasploit, impacket wmiexec/psexec, etc.)
+          blocked  → shell operators, DoS patterns, out-of-scope IPs — discarded
+      • Caps auto-execute at --max-exec-commands (default: 30)
       ↓
-10. Calculate risk score
+16. Pre-flight Checks
+      • Tool availability — checks every required tool via: command -v <tool>
+      • Passwordless sudo — checks via: sudo -n true
+      • Reports missing tools and sudo warnings before execution starts
       ↓
-11. Display findings
+17. Confirmation Prompt
+      • Prints full execution plan: commands to run + manual suggestions
+      • Prompts [y/N] (skip with --no-confirm)
       ↓
-12. Generate interactive dashboard
+18. Command Execution
+
+      LOCAL (no --remote-host):
+        • Runs directly via subprocess on the local machine
+        • Health check thread prints status every 20 seconds
+
+      REMOTE (--remote-host kali@IP):
+        • SSH ControlMaster opened — single connection, all commands multiplexed
+        • Each command runs in its own tmux window on the remote Kali box
+            → Commands survive SSH disconnects — process keeps running on Kali
+            → Watch live:  ssh kali@IP -t 'tmux attach -t nmap-<pid>'
+        • Polls exit file every 5 seconds to detect completion
+        • tmux session and temp files cleaned up after all commands finish
+
+      Health check (both modes) — every 20 seconds:
+        [health] [03/15] nikto → 192.168.1.10 (80/tcp/http): RUNNING (42s elapsed)
+
+      On completion:
+        COMPLETED — exit 0 — 67.3s
+        TIMED OUT — (hit --exec-timeout limit)
+
+      Output:
+        • Saved to enumeration/<NNN>_<ip>_<service>_<tool>.txt  (full, untruncated)
+        • ANSI escape codes stripped from all output
+        • Outputs >50KB truncated in report with indicator
+      ↓
+19. Manual Suggestions displayed
+      • Brute force and exploitation commands listed separately
+      • Tester copies and runs these manually after reviewing auto-execution results
+
+
+PHASE 6 — OLLAMA SYNTHESIS  [requires --execute + --ai]
+─────────────────────────────────────────────────────────
+20. Reads full output files from enumeration/ folder
+      (not truncated in-memory buffers — complete tool output sent to model)
+      ↓
+21. Sends structured prompt to Ollama with:
+      • Engagement profile context (external / internal / unset)
+      • All command outputs with status (exit code / timed out)
+      • Total commands: succeeded vs failed count
+      ↓
+22. Ollama produces structured verdict:
+
+      ┌─────────────────────────────────────────────────────────┐
+      │  ## Confirmed Findings                                  │
+      │     Each weakness with target + evidence + severity     │
+      │                                                         │
+      │  ## Key Intelligence                                    │
+      │     Versions, banners, endpoints, accounts, certs       │
+      │                                                         │
+      │  ## Next Steps                                          │
+      │     [Priority] | Target | Action | Reason              │
+      │                                                         │
+      │  ## Final Verdict                                       │
+      │     CONTINUE  — more enumeration needed                 │
+      │     ESCALATE  — ready for manual exploitation           │
+      │     COMPLETE  — attack surface fully mapped             │
+      └─────────────────────────────────────────────────────────┘
+
+      Saved to:    reports/<project>_<timestamp>/live_findings.txt
+      Displayed in: Live Findings tab of HTML report
+
+
+PHASE 7 — FINAL OUTPUT
+────────────────────────
+      reports/<project>_<timestamp>/
+      ├── findings.txt          Plain text findings + commands
+      ├── report.html           Interactive HTML (all 4 tabs)
+      ├── ai_report.txt         Raw AI attack plan
+      ├── live_findings.txt     Ollama synthesis + final verdict
+      └── enumeration/
+          ├── 001_<ip>_<service>_<tool>.txt
+          ├── 002_<ip>_<service>_<tool>.txt
+          └── ...  (one file per executed command)
+
+      logs/
+      └── run_<timestamp>.log   Full DEBUG log for every run
+
+
+QUICK REFERENCE — COMMAND MODES
+─────────────────────────────────
+  Playbooks only
+    ./analyzer.sh scan.xml -C project
+
+  + AI attack plan
+    ./analyzer.sh scan.xml -C project --ai --profile external
+
+  + Auto-execute locally
+    ./analyzer.sh scan.xml -C project --ai --profile external --execute
+
+  + Auto-execute on remote Kali (recommended)
+    ./analyzer.sh scan.xml -C project --ai --profile external \
+      --execute --exec-timeout 120 --max-exec-commands 30 \
+      --remote-host kali@192.168.1.100 --remote-key ~/.ssh/kali_key
+
+  CVE database update
+    ./analyzer.sh --cve-db-update
+
+
+SAFETY GUARDRAILS
+──────────────────
+  Auto-executes:   enumeration and fingerprinting only
+  Never auto-runs: brute force, exploitation, lateral movement tools
+  Always blocked:  shell operators (&&, ||, |, ;, >, $(), `)
+                   DoS patterns (hping, slowloris, loic, hulk)
+                   IPs outside the scan scope

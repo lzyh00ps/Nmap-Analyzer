@@ -1,6 +1,3 @@
 plotly
 defusedxml
 httpx
-ollama
-openai
-cai-framework

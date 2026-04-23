@@ -16,11 +16,15 @@ reports/
 data/nvd_feeds/
 data/cve_database.db
 
-# Logs (CAI session traces)
+# Logs
 logs/
 
-# Test data (may contain real IPs)
-testnmap.xml
+# Scan files (may contain real IPs / client data)
+*.xml
+
+# CVE database WAL / shared memory files
+data/cve_database.db-shm
+data/cve_database.db-wal
 
 # Stray files
 1

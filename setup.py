@@ -11,9 +11,6 @@ REQUIREMENTS = [
     "plotly",
     "defusedxml",
     "httpx",
-    "ollama",
-    "openai",
-    "cai-framework",
 ]
 
 
@@ -66,23 +63,82 @@ def setup_data_dirs() -> None:
     print("[+] Data directories ready.")
 
 
-def check_ollama() -> None:
-    """Check if Ollama is installed and running."""
-    print("[*] Checking Ollama installation...")
+def _ollama_binary() -> str | None:
+    """Return the path to the ollama binary if found on PATH, else None."""
+    import shutil
+    return shutil.which("ollama")
+
+
+def _ollama_models() -> list[str] | None:
+    """
+    Query the running Ollama daemon for available models.
+    Returns a list of model name strings, or None if the daemon is unreachable.
+    """
+    import urllib.request
+    import urllib.error
+    import json
+
+    host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
     try:
-        import httpx
-        resp = httpx.get("http://127.0.0.1:11434/api/tags", timeout=5.0)
-        models = resp.json().get("models", [])
-        model_names = [m.get("name", m.get("model", "")) for m in models]
-        print(f"[+] Ollama is running with {len(models)} model(s): {', '.join(model_names)}")
-        if not any("qwen2.5-coder" in n for n in model_names):
-            print("[!] Warning: Default model 'qwen2.5-coder:14b' not found.")
-            print("    Pull it with: ollama pull qwen2.5-coder:14b")
+        with urllib.request.urlopen(f"{host}/api/tags", timeout=4) as resp:
+            data = json.loads(resp.read())
+        models = data.get("models", [])
+        names: list[str] = []
+        for m in models:
+            name = m.get("name") or m.get("model") or ""
+            if name:
+                names.append(name)
+        return names
     except Exception:
-        print("[!] Ollama is not running or not installed.")
-        print("    Install: https://ollama.com/download")
-        print("    Pull model: ollama pull qwen2.5-coder:14b")
-        print("    AI suggestions (--ai) will be unavailable without Ollama.")
+        return None
+
+
+def check_ollama() -> None:
+    """
+    Detect whether Ollama is installed and the daemon is running.
+    Lists available models when reachable. Always ends with manual-setup guidance.
+    """
+    print("[*] Checking Ollama (optional — required only for --ai)...")
+
+    binary = _ollama_binary()
+
+    if binary:
+        print(f"[+] Ollama binary found: {binary}")
+    else:
+        # Provide platform-specific install hint
+        platform = sys.platform
+        if platform == "darwin":
+            hint = "brew install ollama  OR  download from https://ollama.com/download"
+        elif platform.startswith("win"):
+            hint = "Download the Windows installer from https://ollama.com/download"
+        else:
+            hint = "curl -fsSL https://ollama.com/install.sh | sh"
+        print(f"[!] Ollama binary not found on PATH.")
+        print(f"    Install it manually: {hint}")
+
+    models = _ollama_models()
+
+    if models is not None:
+        print(f"[+] Ollama daemon is running — {len(models)} model(s) available:")
+        for name in models:
+            marker = " *" if "qwen2.5-coder" in name else ""
+            print(f"      - {name}{marker}")
+        if not any("qwen2.5-coder" in n for n in models):
+            print("    [!] Default model 'qwen2.5-coder:14b' not pulled yet.")
+            print("        Pull it with: ollama pull qwen2.5-coder:14b")
+    else:
+        if binary:
+            print("[!] Ollama daemon is not running.")
+            print("    Start it with: ollama serve")
+        else:
+            print("[!] Ollama daemon unreachable (not installed or not running).")
+
+    print()
+    print("    NOTE: Ollama is NOT installed automatically by this setup script.")
+    print("    To enable AI suggestions (--ai), set it up manually:")
+    print("      1. Install Ollama : https://ollama.com/download")
+    print("      2. Pull a model   : ollama pull qwen2.5-coder:14b")
+    print("      3. Start daemon   : ollama serve")
 
 
 def check_playbooks() -> None:
@@ -159,32 +215,9 @@ def main() -> int:
         return 1
     print()
 
-    # Step 6: Check external dependencies
-    # Add venv site-packages to path for httpx import in check_ollama
-    subprocess.run(
-        [str(python), "-c",
-         "import httpx; r=httpx.get('http://127.0.0.1:11434/api/tags',timeout=5); "
-         "models=r.json().get('models',[]); names=[m.get('name','') for m in models]; "
-         f"print('[+] Ollama running: ' + ', '.join(names)) if models else print('[!] Ollama: no models found')"],
-        capture_output=True, text=True,
-    )
-    check_ollama_via_venv = subprocess.run(
-        [str(python), "-c",
-         "import httpx\n"
-         "try:\n"
-         "    r=httpx.get('http://127.0.0.1:11434/api/tags',timeout=5)\n"
-         "    ms=r.json().get('models',[])\n"
-         "    ns=[m.get('name','') for m in ms]\n"
-         "    print(f'[+] Ollama running with {len(ms)} model(s): '+', '.join(ns))\n"
-         "    if not any('qwen2.5-coder' in n for n in ns):\n"
-         "        print('[!] Default model qwen2.5-coder:14b not found. Pull it: ollama pull qwen2.5-coder:14b')\n"
-         "except Exception:\n"
-         "    print('[!] Ollama not running. AI mode (--ai) unavailable.')\n"
-         "    print('    Install: https://ollama.com/download')\n"
-         "    print('    Pull model: ollama pull qwen2.5-coder:14b')\n"],
-        capture_output=True, text=True,
-    )
-    print(check_ollama_via_venv.stdout.strip())
+    # Step 6: Ollama detection + guidance
+    check_ollama()
+    print()
     check_playbooks()
     check_cve_db()
     print()

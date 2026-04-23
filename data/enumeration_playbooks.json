@@ -203,12 +203,9 @@
     "commands": [
       "nmap --script http-methods,http-title,http-auth,http-headers,http-server-header -p80,8080,8000 TARGET",
       "whatweb -a 3 http://TARGET",
-      "dirsearch -u http://TARGET -e php,html,txt -t 20",
-      "nikto -h http://TARGET -output nikto_TARGET.txt",
-      "nuclei -u http://TARGET -t /root/nuclei-templates/ -o nuclei_TARGET.txt",
-      "ffuf -u http://TARGET/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -mc 200,301,302,403 -o ffuf_TARGET.json -of json",
-      "gobuster dir -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -x php,html,txt,bak,zip -o gobuster_TARGET.txt",
-      "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -x php,html,txt",
+      "nikto -h http://TARGET -nointeractive",
+      "nuclei -u http://TARGET -o nuclei_TARGET.txt",
+      "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -x php,html,txt,bak,zip",
       "curl -s -I http://TARGET",
       "curl -s -X OPTIONS http://TARGET -D -"
     ],
@@ -241,10 +238,10 @@
     "commands": [
       "sslscan TARGET:443",
       "testssl.sh TARGET",
-      "sslyze --regular TARGET",
+      "sslyze TARGET",
       "nmap --script ssl-enum-ciphers,ssl-cert,ssl-heartbleed,ssl-poodle,ssl-dh-params -p443 TARGET",
-      "nikto -h https://TARGET -output nikto_https_TARGET.txt",
-      "nuclei -u https://TARGET -t /root/nuclei-templates/ -o nuclei_https_TARGET.txt"
+      "nikto -h https://TARGET -nointeractive",
+      "nuclei -u https://TARGET -o nuclei_https_TARGET.txt"
     ],
     "notes": "Check for weak ciphers, expired/self-signed certs, Heartbleed, POODLE, BEAST, and HSTS missing."
   },
@@ -1136,7 +1133,7 @@
       "curl -s http://TARGET:3000/api/org",
       "curl -s -u admin:admin http://TARGET:3000/api/datasources",
       "curl -s http://TARGET:3000/api/users",
-      "nuclei -u http://TARGET:3000 -t /root/nuclei-templates/exposures/",
+      "nuclei -u http://TARGET:3000",
       "nmap --script http-title -p3000 TARGET"
     ],
     "notes": "Default creds: admin/admin. CVE-2021-43798 path traversal for older versions."
@@ -1252,7 +1249,7 @@
       "curl -s http://TARGET:8080/api/json",
       "curl -s http://TARGET:8080/asynchPeople/",
       "curl -s http://TARGET:8080/script",
-      "nuclei -u http://TARGET:8080 -t /root/nuclei-templates/exposures/",
+      "nuclei -u http://TARGET:8080",
       "curl -s http://TARGET:8080/manage",
       "curl -u admin:admin http://TARGET:8080/crumbIssuer/api/json"
     ],
@@ -1280,7 +1277,7 @@
       "curl -s http://TARGET/api/v4/version",
       "curl -s http://TARGET/api/v4/projects?visibility=public",
       "curl -s http://TARGET/users/sign_in",
-      "nuclei -u http://TARGET -t /root/nuclei-templates/ -tags gitlab",
+      "nuclei -u http://TARGET -tags gitlab",
       "curl -s 'http://TARGET/-/metrics'"
     ],
     "notes": "Check for public repos, user enumeration, and version-specific CVEs. Default admin password prompt on first login."
@@ -2168,7 +2165,7 @@
     "commands": [
       "nmap -sV -sC -p9090 TARGET",
       "curl -v http://TARGET:9090/",
-      "nikto -h http://TARGET:9090"
+      "nikto -h http://TARGET:9090 -nointeractive"
     ]
   },
   "winbox": {
@@ -2208,7 +2205,7 @@
       "curl -s http://TARGET/.htpasswd",
       "nmap --script http-apache-negotiation,http-server-header -p PORT TARGET",
       "curl -s -H 'Range: bytes=0-18446744073709551615' http://TARGET/",
-      "ffuf -u http://TARGET/FUZZ -w /usr/share/wordlists/dirb/common.txt -e .php,.html,.txt,.bak,.old",
+      "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -x php,html,txt,bak,old",
       "nuclei -u http://TARGET -tags apache"
     ],
     "notes": "Check for mod_status, mod_info exposure. Test for path traversal on 2.4.49-2.4.50."
@@ -2223,7 +2220,7 @@
       "curl -s http://TARGET/stub_status",
       "curl -s -H 'Host: ' http://TARGET/",
       "nmap --script http-server-header -p PORT TARGET",
-      "ffuf -u http://TARGET/FUZZ -w /usr/share/wordlists/dirb/common.txt -e .php,.html,.conf",
+      "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -x php,html,conf",
       "nuclei -u http://TARGET -tags nginx",
       "curl -s http://TARGET/%2e%2e/etc/passwd"
     ],
@@ -2239,7 +2236,7 @@
       "nmap --script http-iis-webdav-vuln -p PORT TARGET",
       "nmap --script http-webdav-scan -p PORT TARGET",
       "curl -s -X OPTIONS http://TARGET/ -I",
-      "gobuster dir -u http://TARGET -w /usr/share/wordlists/dirb/common.txt -x asp,aspx,ashx,asmx,config",
+      "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -x asp,aspx,ashx,asmx,config",
       "nuclei -u http://TARGET -tags iis",
       "curl -s http://TARGET/aspnet_client/",
       "curl -s http://TARGET/web.config"
@@ -2256,7 +2253,7 @@
       "curl -s http://TARGET:8080/host-manager/html",
       "curl -s http://TARGET:8080/manager/status",
       "nmap --script http-tomcat-manager-bruteforce -p PORT TARGET",
-      "gobuster dir -u http://TARGET:8080 -w /usr/share/wordlists/dirb/common.txt -x jsp,war,txt",
+      "feroxbuster -u http://TARGET:8080 -w /usr/share/seclists/Discovery/Web-Content/common.txt -x jsp,war,txt",
       "hydra -L /usr/share/wordlists/metasploit/tomcat_mgr_default_users.txt -P /usr/share/wordlists/metasploit/tomcat_mgr_default_pass.txt http://TARGET:8080/manager/html",
       "curl -s http://TARGET:8080/WEB-INF/web.xml",
       "nuclei -u http://TARGET:8080 -tags tomcat"
@@ -2276,7 +2273,7 @@
       "curl -s http://TARGET/xmlrpc.php",
       "curl -s http://TARGET/readme.html",
       "nuclei -u http://TARGET -tags wordpress",
-      "ffuf -u http://TARGET/wp-content/plugins/FUZZ -w /usr/share/wordlists/dirb/common.txt"
+      "feroxbuster -u http://TARGET/wp-content/plugins/ -w /usr/share/seclists/Discovery/Web-Content/common.txt"
     ],
     "notes": "WPScan is the go-to. Check xmlrpc.php for brute-force amplification. Enumerate plugins."
   },
@@ -2290,7 +2287,7 @@
       "curl -s http://TARGET/configuration.php.bak",
       "curl -s http://TARGET/README.txt",
       "curl -s http://TARGET/api/index.php/v1/config/application?public=true",
-      "ffuf -u http://TARGET/FUZZ -w /usr/share/wordlists/dirb/common.txt -e .php,.txt,.bak",
+      "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -x php,txt,bak",
       "nuclei -u http://TARGET -tags joomla"
     ],
     "notes": "Check for exposed admin panel, config backup, and API info disclosure."
@@ -2306,7 +2303,7 @@
       "curl -s http://TARGET/user/login",
       "curl -s http://TARGET/node/1",
       "curl -s http://TARGET/admin/config",
-      "ffuf -u http://TARGET/FUZZ -w /usr/share/wordlists/dirb/common.txt -e .php,.txt,.module",
+      "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -x php,txt,module",
       "nuclei -u http://TARGET -tags drupal"
     ],
     "notes": "CHANGELOG.txt reveals exact version. Drupalgeddon (SA-CORE-2018-002) is critical."

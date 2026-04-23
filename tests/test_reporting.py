@@ -69,7 +69,7 @@ class ReportingTests(unittest.TestCase):
 
     def test_ai_analysis_tab_shown_when_present(self) -> None:
         result = self._make_result()
-        result.ai_provider = "alias1"
+        result.ai_provider = "ollama"
         result.ai_analysis = "## Priority Targets\n- **10.10.10.1** — Web server with critical CVE"
 
         text = build_text_report(result)
