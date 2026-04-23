@@ -436,7 +436,7 @@ Profiles control the AI Attack Plan analysis. Pass `--profile` alongside `--ai`.
 `--execute` automatically runs safe enumeration commands against the scan targets after confirmation.
 
 **What runs automatically:**
-- Port scanning (nmap scripts), web probing (curl, nikto, nuclei, ffuf, gobuster)
+- Port scanning (nmap scripts), web probing (curl, nikto, nuclei, ffuf)
 - SMB/LDAP/SNMP enumeration, SSH audit, DNS queries, service fingerprinting
 
 **What stays as manual suggestions only (never auto-run):**
@@ -578,7 +578,7 @@ After the initial CVE feed download:
 | AI Report tab empty | Model is still running — no timeout on generation. Check `logs/` for errors. |
 | `stream idle timeout` | Fixed in current version (`read=None` on streaming). Update your copy. |
 | SSH connection refused | Ensure `sshd` is running on the remote host: `sudo systemctl start ssh` |
-| Tool not found on remote | Install missing tools on the Kali box, e.g. `sudo apt install ffuf gobuster` |
+| Tool not found on remote | Install missing tools on the Kali box, e.g. `sudo apt install ffuf` |
 | Sudo password required | Add `kali ALL=(ALL) NOPASSWD: ALL` to `/etc/sudoers.d/` on remote box |
 | `Permission denied: analyzer.sh` | Run `chmod +x analyzer.sh` |
 | Reports not generated | Ensure `reports/` directory exists: `mkdir -p reports` |

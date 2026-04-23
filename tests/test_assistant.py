@@ -113,6 +113,71 @@ class PlaybookTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 PlaybookMatcher.from_file(path)
 
+    def test_playbook_prefers_single_ffuf_directory_command(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "playbooks.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "http": {
+                            "commands": [
+                                "whatweb http://TARGET",
+                                "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -x php,html,txt",
+                            ],
+                            "ports": [80],
+                        },
+                        "http_apache": {
+                            "commands": [
+                                "feroxbuster -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -x php,txt,bak,old",
+                            ],
+                            "ports": [80],
+                            "services": ["http"],
+                            "products": ["apache"],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            matcher = PlaybookMatcher.from_file(path)
+            service = Service(port=80, protocol="tcp", name="http", product="Apache httpd", version="2.4.58")
+            match = matcher.match_with_metadata(service, "Web Server")
+
+        ffuf_commands = [command for command in match.commands if command.startswith("ffuf ")]
+        self.assertEqual(len(ffuf_commands), 1)
+        self.assertIn("-u http://TARGET/FUZZ", ffuf_commands[0])
+        self.assertIn("-e .php,.txt,.bak,.old", ffuf_commands[0])
+        self.assertIn("whatweb http://TARGET", match.commands)
+
+    def test_playbook_prefers_single_sslscan_tls_command(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "playbooks.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "https": {
+                            "commands": [
+                                "sslscan TARGET:443",
+                                "testssl.sh TARGET",
+                                "sslyze TARGET",
+                                "nuclei -u https://TARGET",
+                            ],
+                            "ports": [443],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            matcher = PlaybookMatcher.from_file(path)
+            service = Service(port=443, protocol="tcp", name="https", product="nginx", version="")
+            match = matcher.match_with_metadata(service, "Web Server")
+
+        tls_commands = [command for command in match.commands if command.startswith("sslscan ")]
+        self.assertEqual(len(tls_commands), 1)
+        self.assertEqual(tls_commands[0], "sslscan --show-certificate TARGET:443")
+        self.assertIn("nuclei -u https://TARGET", match.commands)
+
 
 class CVETests(unittest.TestCase):
     def test_cve_lookup_returns_ranked_entries(self) -> None:
@@ -162,6 +227,37 @@ class AISafetyTests(unittest.TestCase):
         )
         commands = AICommandGenerator._extract_commands(raw, limit=10)
         self.assertEqual(commands, ["ldapsearch -x -H ldap://TARGET"])
+
+    def test_ai_prefers_single_ffuf_directory_command(self) -> None:
+        raw = json.dumps(
+            [
+                "gobuster dir -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -x php,txt",
+                "ffuf -u http://TARGET/FUZZ -w /usr/share/seclists/Discovery/Web-Content/common.txt -e .php,.txt -ac -mc all -fc 404",
+                "dirsearch -u http://TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -e php,txt",
+                "whatweb http://TARGET",
+            ]
+        )
+        commands = AICommandGenerator._extract_commands(raw, limit=10)
+        ffuf_commands = [command for command in commands if command.startswith("ffuf ")]
+        self.assertEqual(len(ffuf_commands), 1)
+        self.assertIn("whatweb http://TARGET", commands)
+        self.assertEqual(len(commands), 2)
+
+    def test_ai_prefers_single_sslscan_tls_command(self) -> None:
+        raw = json.dumps(
+            [
+                "testssl.sh TARGET",
+                "sslyze TARGET",
+                "sslscan TARGET:443",
+                "whatweb https://TARGET",
+            ]
+        )
+        commands = AICommandGenerator._extract_commands(raw, limit=10)
+        tls_commands = [command for command in commands if command.startswith("sslscan ")]
+        self.assertEqual(len(tls_commands), 1)
+        self.assertEqual(tls_commands[0], "sslscan --show-certificate TARGET:443")
+        self.assertIn("whatweb https://TARGET", commands)
+        self.assertEqual(len(commands), 2)
 
 
 class PipelineTests(unittest.TestCase):
